@@ -1,13 +1,29 @@
 import argparse
+import config as CFG
+from base_model import BaseModel
+
+def seed_everything(seed: int):
+    import random, os
+    import numpy as np
+    import torch
+    
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
 
 
-def main():
-    pass
+def main(args):
+    model = BaseModel(args)
+    model.train()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Torch KG-PR')
 
-    parser.add_argument('--batch-size', type=int, default=1, metavar='N')
+    parser.add_argument('--batch-size', type=int, default=32, metavar='N')
     parser.add_argument('--val-batch-size', type=int, default=1, metavar='N')
     parser.add_argument('--train-folder', type=str,
                         default="data/prescriptions/train/",
@@ -34,3 +50,5 @@ if __name__ == '__main__':
                         help='how many epoches to wait before saving model')
     
     args = parser.parse_args()
+    seed_everything(CFG.seed_number)
+    main(args)
