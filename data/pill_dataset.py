@@ -23,12 +23,7 @@ class PillFolder(ImageFolder):
         return img_data
     
     def __len__(self):
-        min_len = 1e7
-        for k in self.imgs_dict.keys():
-            if min_len > len(self.imgs_dict[k]):
-                min_len = len(self.imgs_dict[k])
-
-        return min_len
+        return len(self.imgs)
 
     def _find_classes(self, dir: str) -> Tuple[List[str], Dict[str, int]]:
         """
@@ -49,23 +44,22 @@ class PillFolder(ImageFolder):
         return classes, class_to_idx
 
     def __getitem__(self, index: int):
-        packed_imgs = []
-        for k in self.imgs_dict.keys():
-            path = self.imgs_dict[k][index]
-            sample = self.loader(path)
-            if self.transform is not None:
-                sample = self.transform(sample)
-            if self.target_transform is not None:
-                target = self.target_transform(target)
-            packed_imgs.append(sample.unsqueeze(0))
-        
-        return torch.cat(packed_imgs, dim=0), torch.tensor(list(self.imgs_dict.keys()))
+        path, target = self.imgs[index]
+        sample = self.loader(path)
+        if self.transform is not None:
+            sample = self.transform(sample)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return sample, torch.tensor([target], dtype=torch.long)
+    
         
 class PillDataset(Dataset):
-    def __init__(self, train_folder, g_ebedding_path=CFG.g_embedding_path, mode='train') -> None:
+    def __init__(self, train_folder, batch_size=1, g_ebedding_path=CFG.g_embedding_path, mode='train') -> None:
         self.train_folder = train_folder
         self.g_embedding_path = g_ebedding_path
         self.mode = mode
+        self.batch_size = batch_size
 
         self.label_dict, self.g_embedding = self.__get_label_gebedding()
         self.transform = self.__get_transforms()
@@ -76,21 +70,24 @@ class PillDataset(Dataset):
 
     def __getitem__(self, index):
         pill_folder = PillFolder(self.train_folder + self.prescriptions_folder[index], self.label_dict, self.transform)
-        rand_idx = random.randint(0, len(pill_folder) - 1)
-        img, label = pill_folder[rand_idx]
+        # pill_dts = DataLoader(pill_folder, batch_size=self.batch_size, shuffle=True, num_workers=CFG.num_workers)
+        
+        indexes = random.sample(range(len(pill_folder)), self.batch_size)
+        # rand_idx = random.randint(0, len(pill_folder) - 1)
+        imgs = []
+        labels = []
+        for i in indexes:
+            img, label = pill_folder[i]
+            imgs.append(img.unsqueeze(0))
+            labels.append(label)
 
-        return img, label, self.g_embedding[list(label)]
+        imgs = torch.cat(imgs, dim=0)
+        labels = torch.cat(labels, dim=0)
 
-    # def test(self, idx=0):
-    #     pill_folder = PillFolder(self.train_folder + self.prescriptions_folder[idx], self.label_dict, self.transform)
-    #     loader = DataLoader(pill_folder, batch_size=10, shuffle=True)
-    #     cnt = 0
-    #     for img, label in loader:
-    #         if cnt < 5:
-    #             print(img.shape, label)
-    #         cnt += 1
+        # print(imgs.shape)
+        # print(labels)
 
-    #     print(len(pill_folder))
+        return imgs, labels, self.g_embedding[labels]
 
     def __get_label_gebedding(self):
         labels = []
@@ -102,7 +99,7 @@ class PillDataset(Dataset):
                 labels.append(mapped_pill)
                 g_embedding.append([float(x) for x in ebd.split(' ')])
 
-        return labels, g_embedding
+        return labels, torch.Tensor(g_embedding)
 
     def __get_transforms(self):
         if self.mode == "train":
@@ -119,11 +116,15 @@ class PillDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pill_dts = PillDataset(CFG.train_folder, CFG.g_embedding_path, mode='train')
+    pill_dts = PillDataset(CFG.test_folder, 32, CFG.g_embedding_path, mode='train')
     # pill_dts = PillFolder(CFG.train_folder, CFG.label_dict, pill_dts.transform)
-    dt_loader = DataLoader(pill_dts, batch_size=10, shuffle=True)
+    # dt_loader = DataLoader(pill_dts, batch_size=1, shuffle=True)
     cnt = 0
-    for img, label in dt_loader:
-        if cnt < 5:
-            print(img.shape, label)
-        cnt += 1
+    print(len(pill_dts))
+
+    for img, label, g in pill_dts:
+        print(img.shape)
+        print(label.shape)
+        print(g.shape)
+        # cnt += 1
+        # print(cnt)

@@ -6,7 +6,6 @@ import config as CFG
 import torch.nn.functional as F
 from torch import nn
 
-
 class MetricLogger:
     def __init__(self, project_name='KGbasedPR', args=None, tags=None):
         self.run = wandb.init(project_name, entity='anhduy0911', config=args, tags=tags)
@@ -20,7 +19,9 @@ class MetricLogger:
 
         acc = accuracy_score(targets, preds)
         self.metrics['accuracy'] = acc
-        self.metrics['report'] = classification_report(targets, preds, output_dict=True)
+        dict_avg = classification_report(targets, preds, output_dict=True, zero_division=0)['weighted avg']
+        for k in dict_avg.keys():
+            self.metrics[k] = dict_avg[k]
         
     
     def update(self, preds: torch.Tensor, targets: torch.Tensor):
@@ -63,5 +64,33 @@ class MetricTracker:
         self.preds = []
         self.targets = []
 
+def test_metric():
+    a = torch.tensor([1,5,2], dtype=torch.long, device='cuda')
+    b = torch.tensor([1,5,3], dtype=torch.long, device='cuda')
+    a = a.cpu().detach().numpy()
+    b = b.cpu().detach().numpy()
+
+    print(classification_report(a, b, zero_division=0, output_dict=True))
+    print(accuracy_score(a, b))
 
 
+class TripletLoss(nn.Module):
+    def __init__(self, margin=1.0):
+        super(TripletLoss, self).__init__()
+        self.margin = margin
+        self.cos = nn.CosineSimilarity(dim=-1, eps=1e-6)
+            
+    def calc_cosinsimilarity(self, x1, x2):
+        return self.cos(x1, x2)
+
+    
+    def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:
+        distance_positive = self.calc_cosinsimilarity(anchor, positive)
+        distance_negative = self.calc_cosinsimilarity(anchor, negative)
+
+        losses = torch.relu(-distance_positive + distance_negative + self.margin)
+
+        return losses.mean()
+
+if __name__ == '__main__':
+    test_metric()

@@ -5,9 +5,11 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm as tqdm
 from data.pill_dataset import PillDataset
 import config as CFG
-from models.modules import ImageEncoder
+from models.KGbased_model import KGBasedModel
 from utils.metrics import MetricLogger
-class BaseModel:
+
+
+class KGPillRecognitionModel:
     def __init__(self, args):
         """
         Model wrapper for all models
@@ -20,7 +22,8 @@ class BaseModel:
 
         self.train_dataset, self.test_dataset = PillDataset(CFG.train_folder, batch_size=args.batch_size), PillDataset(CFG.test_folder, batch_size=args.v_batch_size, mode='test')
 
-        self.model = ImageEncoder(image_num_classes=CFG.n_class)
+        self.g_embedding = self.train_dataset.g_embedding.to(self.device)
+        self.model = KGBasedModel()
         self.model.to(self.device)
         print(self.model)
 
@@ -28,35 +31,55 @@ class BaseModel:
         """
         Train the model
         """
-        loss_func = torch.nn.CrossEntropyLoss()
+        # import time
+        categorical_func_1 = torch.nn.CrossEntropyLoss()
+        categorical_func_2 = torch.nn.CrossEntropyLoss()
+        domain_linkage_func = torch.nn.CosineEmbeddingLoss()
+
         optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         
-        self.model.train()
-        logger = MetricLogger(args=self.args, tags=['baseline', 'train'])
+        # start_time = time.time()
+        # self.model.train()
+        logger = MetricLogger(args=self.args, tags=['KG_v1', 'train'])
         for epoch in tqdm(range(self.args.epochs)):
             running_loss = 0.0
             running_corrects = 0
             sample_len = 0
 
-            for x, y, _  in self.train_dataset:
-                x = x.to(self.device)
-                sample_len += y.shape[0]
-                y = y.to(self.device)
-                
-                optimizer.zero_grad()
-                outputs = self.model(x)
-                _, y_pred = torch.max(outputs, 1)
-                
-                logger.update(preds=y_pred, targets=y)
-                # print(y_pred)
-                # print(y)
-                loss = loss_func(outputs, y)
-                loss.backward()
-                optimizer.step()
+            for i in range(len(self.train_dataset)):
+                x, y, g = self.train_dataset[i]
 
-                running_loss += loss.item() * x.size(0)
+                bs = y.shape[0]
+                sample_len += bs
+                # print(f'1: {time.time() - start_time}')
+                # start_time = time.time()
+                x = x.to(self.device)
+                y = y.to(self.device)
+                g = g.to(self.device)
+                # print(f'2: {time.time() - start_time}')
+                # start_time = time.time()
+                optimizer.zero_grad()
+                pseudo_outputs, mapped_ebd, outputs = self.model(x, self.g_embedding)
+                # print(f'3: {time.time() - start_time}')
+                # start_time = time.time()
+                _, y_pred = torch.max(outputs, 1)
+                # print(f'4: {time.time() - start_time}')
+                # start_time = time.time()
+                logger.update(preds=y_pred, targets=y)
+
+                closs_1 = categorical_func_1(outputs, y)
+                closs_2 = categorical_func_2(pseudo_outputs, y)
+                dloss = domain_linkage_func(mapped_ebd, g, torch.ones(bs).to(self.device))
+                # print(f'5: {time.time() - start_time}')
+                # start_time = time.time()
+                total_loss = closs_1 + 0.5 * closs_2 + dloss
+                total_loss.backward()
+                optimizer.step()
+                # print(f'6: {time.time() - start_time}')
+                # start_time = time.time()
+                running_loss += total_loss.item() * x.size(0)
                 running_corrects += torch.sum(y_pred == y)
-            
+
             epoch_loss = running_loss / sample_len
             epoch_acc = running_corrects.double() / sample_len
             logger.log_metrics(epoch_loss, step=epoch)
@@ -73,7 +96,7 @@ class BaseModel:
         loss_func = torch.nn.CrossEntropyLoss()
         
         self.model.eval()
-        logger = MetricLogger(args=self.args, tags=['baseline', 'test'])
+        logger = MetricLogger(args=self.args, tags=['KG_v1', 'test'])
 
         running_loss = 0.0
         running_corrects = 0
@@ -112,13 +135,13 @@ class BaseModel:
         Save the model to a file
         """
 
-        torch.save(self.model.state_dict(), 'logs/checkpoints/baseline.pt')
+        torch.save(self.model.state_dict(), 'logs/checkpoints/kg_v1.pt')
     
     def load(self):
         """
         Load the model
         """
-        self.model.load_state_dict(torch.load('logs/checkpoints/baseline.pt'))
+        self.model.load_state_dict(torch.load('logs/checkpoints/kg_v1.pt'))
 
     def __str__(self):
         """
