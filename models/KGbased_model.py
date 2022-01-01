@@ -7,7 +7,7 @@ class KGBasedModel(nn.Module):
     def __init__(self, hidden_size=CFG.g_embedding_features, num_class=CFG.n_class):
         super().__init__()
 
-        self.backbone = ImageEncoder(image_num_classes=None)
+        self.backbone = self.setup_backborn_model()
         
         hidden_visual_features = self.backbone.visual_features
 
@@ -17,12 +17,16 @@ class KGBasedModel(nn.Module):
         self.attention_dense = nn.Linear(hidden_size * 2, hidden_size)
         self.classifier = nn.Linear(hidden_size, num_class)
 
+    def setup_backborn_model(self):
+        model = ImageEncoder()
+        model.load_state_dict(torch.load(CFG.backbone_path))
+        for param in model.parameters():
+            param.requires_grad = False
+        
+        return model
+    
     def forward(self, x, g_embedding):
-        visual_embedding = self.backbone(x)
-
-        # print(visual_embedding.shape)
-        pseudo_classifier_output = self.pseudo_classifier(visual_embedding)
-        # print(pseudo_classifier_output.shape)
+        visual_embedding, pseudo_classifier_output = self.backbone(x)
         
         mapped_visual_embedding = self.projection(visual_embedding)
         # print(mapped_visual_embedding.shape)

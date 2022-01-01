@@ -50,7 +50,7 @@ def build_KG_graph(json_file):
                 f.write(pill + '\\' + diag + '\\' + str(weight) + '\n')
 
 
-def prepare_prescription_dataset(json_file, graph_path='./data/prescriptions/converted_graph/vectors_u.dat'):
+def prepare_prescription_dataset(json_file, graph_path='./data/converted_graph/vectors_u.dat'):
     import os
 
     training_path = './data/prescriptions/train/'
@@ -109,7 +109,7 @@ def prepare_prescription_dataset(json_file, graph_path='./data/prescriptions/con
     #     if mapped_pills_dict[pill] == "":
     #         print(pill)
 
-    with open('./data/prescriptions/mapped_pills.dat', 'w') as f:
+    with open('./data/converted_graph/mapped_pills.dat', 'w') as f:
         for pill, mapped_pill in mapped_pills_dict.items():
             if mapped_pill != "":
                 f.write(pill + '\\' + mapped_pill + '\\' + g_embedding[pill] + '\n')
@@ -118,7 +118,7 @@ def prepare_prescription_dataset(json_file, graph_path='./data/prescriptions/con
 def test():
     import os 
 
-    path = 'data/prescriptions/result.json'
+    path = 'data/prescriptions/condensed_data.json'
     training_path = './data/prescriptions/train/'
     test_path = './data/prescriptions/test/'
 
@@ -129,7 +129,29 @@ def test():
             for file in files:
                 assert(file in file_list)
 
+def condensed_result_file():
+    import os 
+
+    path = 'data/prescriptions/result.json'
+    training_path = './data/prescriptions/train/'
+    test_path = './data/prescriptions/test/'
+
+    condensed_data = []
+    with open(path) as f:
+        data = json.load(f)
+
+        for p in data:
+            filename = p['id']
+            if os.path.isfile(training_path + filename):
+                condensed_data.append(p)        
+            elif os.path.isfile(test_path + filename):
+                condensed_data.append(p)
+    
+    with open('./data/prescriptions/condensed_data.json', 'w', encoding='utf8') as f:
+        json.dump(condensed_data, f, ensure_ascii=False)
+
 if __name__ == '__main__':
-    # build_KG_graph('data/prescriptions/result.json')
-    # prepare_prescription_dataset('data/prescriptions/result.json')
-    test()
+    # build_KG_graph('data/prescriptions/condensed_data.json')
+    prepare_prescription_dataset('data/prescriptions/condensed_data.json')
+    # condensed_result_file()
+    # test()

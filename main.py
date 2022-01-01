@@ -15,17 +15,17 @@ def seed_everything(seed: int):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
 
-
 def main(args):
-    # model = BaseModel(args)
-    model = KGPillRecognitionModel(args)
-    model.train()
+    model = BaseModel(args)
+    # model = KGPillRecognitionModel(args)
+    model.train_v2()
+    # model.evaluate_v2()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Torch KG-PR')
 
     parser.add_argument('--batch-size', type=int, default=64, metavar='N', dest='batch_size')
-    parser.add_argument('--val-batch-size', type=int, default=32, metavar='N', dest='v_batch_size')
+    parser.add_argument('--val-batch-size', type=int, default=64, metavar='N', dest='v_batch_size')
     parser.add_argument('--train-folder', type=str,
                         default="data/pills/train/",
                         help='training folder path')
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('--log-dir', type=str,
                         default="logs/runs/",
                         help='TensorBoard folder path')
-    parser.add_argument('--epochs', type=int, default=50, metavar='N', dest='epochs',
+    parser.add_argument('--epochs', type=int, default=200, metavar='N', dest='epochs',
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=5e-5, metavar='LR', dest='lr',
                         help='learning rate (default: 5e-5)')

@@ -51,7 +51,8 @@ class PillFolder(ImageFolder):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        return sample, torch.tensor([target], dtype=torch.long)
+        # return sample, torch.tensor([target], dtype=torch.long)
+        return sample, target
     
         
 class PillDataset(Dataset):
@@ -69,21 +70,34 @@ class PillDataset(Dataset):
         return len(self.prescriptions_folder)
 
     def __getitem__(self, index):
+        # import time
+        # start = time.time()
+        # print('Get item...')
         pill_folder = PillFolder(self.train_folder + self.prescriptions_folder[index], self.label_dict, self.transform)
-        # pill_dts = DataLoader(pill_folder, batch_size=self.batch_size, shuffle=True, num_workers=CFG.num_workers)
+        pill_dts = DataLoader(pill_folder, batch_size=self.batch_size, shuffle=True, num_workers=CFG.num_workers)
         
-        indexes = random.sample(range(len(pill_folder)), self.batch_size)
-        # rand_idx = random.randint(0, len(pill_folder) - 1)
-        imgs = []
-        labels = []
-        for i in indexes:
-            img, label = pill_folder[i]
-            imgs.append(img.unsqueeze(0))
-            labels.append(label)
+        # print(time.time() - start)
+        # start = time.time()
+        # indexes = random.sample(range(len(pill_folder)), self.batch_size)
 
-        imgs = torch.cat(imgs, dim=0)
-        labels = torch.cat(labels, dim=0)
+        # # rand_idx = random.randint(0, len(pill_folder) - 1)
+        # imgs = []
+        # labels = []
+        # for i in indexes:
+        #     img, label = pill_folder[i]
+        #     imgs.append(img.unsqueeze(0))
+        #     labels.append(label)
+        
+        # print(time.time() - start)
+        # start = time.time()
+        
+        # imgs = torch.cat(imgs, dim=0)
+        # labels = torch.cat(labels, dim=0)
 
+        imgs, labels = next(iter(pill_dts))
+        
+        # print(time.time() - start)
+        # start = time.time()
         # print(imgs.shape)
         # print(labels)
 
@@ -116,15 +130,20 @@ class PillDataset(Dataset):
 
 
 if __name__ == '__main__':
-    pill_dts = PillDataset(CFG.test_folder, 32, CFG.g_embedding_path, mode='train')
+    # print(CFG)
+    pill_dts = PillDataset(CFG.train_folder, 32, CFG.g_embedding_path, mode='train')
     # pill_dts = PillFolder(CFG.train_folder, CFG.label_dict, pill_dts.transform)
     # dt_loader = DataLoader(pill_dts, batch_size=1, shuffle=True)
     cnt = 0
     print(len(pill_dts))
 
+    import time
+    start = time.time()
     for img, label, g in pill_dts:
+        print('Looppp')
         print(img.shape)
-        print(label.shape)
+        print(label)
         print(g.shape)
+        # print(time.time() - start)
         # cnt += 1
         # print(cnt)

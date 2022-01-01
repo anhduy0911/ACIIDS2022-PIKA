@@ -16,10 +16,12 @@ class ImageEncoder(nn.Module):
             self.img_num_classes = image_num_classes
             
             self.visual_features = self.model.fc.in_features
-            if image_num_classes is not None:
-                self.model.fc = nn.Linear(self.model.fc.in_features, image_num_classes)
-            else:
-                self.model.fc = nn.Identity()
+
+            self.model.fc = nn.Identity()
+            self.classifier = nn.Linear(self.visual_features, image_num_classes)
     
     def forward(self, x):
-        return self.model(x)
+        visual_embedding = self.model(x)
+        y = self.classifier(visual_embedding)
+        return visual_embedding, y
+
