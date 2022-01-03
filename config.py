@@ -2,9 +2,12 @@
 seed_number = 911
 train_folder = "data/pills/train/"
 test_folder = "data/pills/test/"
+train_folder_new = "data/pills/train_new/"
+test_folder_new = "data/pills/test_new/"
 g_embedding_path = "data/converted_graph/mapped_pills.dat"
+g_embedding_condensed = "data/converted_graph/condened_g_embedding.json"
 g_embedding_features = 128
-n_class = 89
+n_class = 76
 num_workers = 4
 eval_steps = 5
 early_stop = 20

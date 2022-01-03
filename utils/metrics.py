@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 class MetricLogger:
-    def __init__(self, project_name='KGbasedPR', args=None, tags=None):
+    def __init__(self, project_name='KGbased_PillRecognition', args=None, tags=None):
         self.run = wandb.init(project_name, entity='anhduy0911', config=args, tags=tags)
         self.type = '_'.join(tags)
         self.train = tags[1] == 'train'
@@ -21,7 +21,6 @@ class MetricLogger:
         self.preds = []
         self.targets = []
         self.target_conf_scores = []
-
 
     def calculate_metrics(self):
         preds = torch.cat(self.preds).cpu().detach().numpy()
@@ -78,8 +77,10 @@ class MetricLogger:
         self.target_conf_scores.clear()
 
 
-    def log_metrics(self, loss, step):
+    def log_metrics(self, loss, step, val_acc=None):
         self.metrics['loss'] = loss
+        if val_acc:
+            self.metrics['val_acc'] = val_acc
         self.calculate_metrics()
         self.run.log(data=self.metrics, step=step)
         self.reset()

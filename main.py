@@ -18,23 +18,24 @@ def seed_everything(seed: int):
 def main(args):
     model = BaseModel(args)
     # model = KGPillRecognitionModel(args)
-    model.train_v2()
-    # model.evaluate_v2()
+    # model.train()
+    model.evaluate()
+    # model.save_cpu(best=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Torch KG-PR')
 
-    parser.add_argument('--batch-size', type=int, default=64, metavar='N', dest='batch_size')
-    parser.add_argument('--val-batch-size', type=int, default=64, metavar='N', dest='v_batch_size')
+    parser.add_argument('--batch-size', type=int, default=32, metavar='N', dest='batch_size')
+    parser.add_argument('--val-batch-size', type=int, default=32, metavar='N', dest='v_batch_size')
     parser.add_argument('--train-folder', type=str,
-                        default="data/pills/train/",
+                        default="data/pills/train_new/",
                         help='training folder path')
     parser.add_argument('--val-folder', type=str,
-                        default="data/pills/test/",
+                        default="data/pills/test_new/",
                         help='validation folder path')
     parser.add_argument('--log-dir', type=str,
                         default="logs/runs/",
-                        help='TensorBoard folder path')
+                        help='Log folder path')
     parser.add_argument('--epochs', type=int, default=200, metavar='N', dest='epochs',
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=5e-5, metavar='LR', dest='lr',

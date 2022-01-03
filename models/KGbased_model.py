@@ -11,8 +11,12 @@ class KGBasedModel(nn.Module):
         
         hidden_visual_features = self.backbone.visual_features
 
-        self.pseudo_classifier = nn.Linear(hidden_visual_features, num_class)
-        self.projection = nn.Linear(hidden_visual_features, hidden_size)
+        self.projection = nn.Sequential(
+            nn.Linear(hidden_visual_features, hidden_size * 2),
+            nn.ReLU(),
+            nn.Linear(hidden_size * 2, hidden_size),
+            nn.ReLU(),
+        ) 
 
         self.attention_dense = nn.Linear(hidden_size * 2, hidden_size)
         self.classifier = nn.Linear(hidden_size, num_class)
