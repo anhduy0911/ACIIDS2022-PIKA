@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 import json
 import config as CFG
 import numpy as np
+import cv2 as cv
 class PillFolder(ImageFolder):
     def __init__(self, root, mode='train', g_embedding_path=CFG.g_embedding_condensed):
         self.mode = mode

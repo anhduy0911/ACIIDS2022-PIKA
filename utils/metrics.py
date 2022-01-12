@@ -14,7 +14,7 @@ import seaborn as sns
 
 class MetricLogger:
     def __init__(self, project_name='KGbased_PillRecognition', args=None, tags=None):
-        self.run = wandb.init(project_name, entity='anhduy0911', config=args, tags=tags)
+        self.run = wandb.init(project_name, entity='aiotlab', config=args, tags=tags, group='DuyNA')
         self.type = '_'.join(tags)
         self.train = tags[1] == 'train'
         self.metrics = {}

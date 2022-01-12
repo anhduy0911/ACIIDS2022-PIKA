@@ -43,7 +43,7 @@ class KGPillRecognitionModel:
         # optimizer_projection = torch.optim.AdamW(self.model.projection.parameters(), lr=0.001)
         # start_time = time.time()
         self.model.train()
-        logger = MetricLogger(args=self.args, tags=['KG_v1', 'train'])
+        logger = MetricLogger(args=self.args, tags=['KG_deepwalk_w', 'train'])
         prev_val_acc = 0
         for epoch in tqdm(range(self.args.epochs)):
             running_loss = 0.0
@@ -131,7 +131,7 @@ class KGPillRecognitionModel:
         loss_func = torch.nn.CrossEntropyLoss()
         
         self.model.eval()
-        logger = MetricLogger(args=self.args, tags=['KG_v1', 'test'])
+        logger = MetricLogger(args=self.args, tags=['KG_deepwalk_w', 'test'])
 
         running_loss = 0.0
         running_corrects = 0
@@ -178,14 +178,14 @@ class KGPillRecognitionModel:
         """
         if not best:
             if device == 'cuda':
-                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_v2.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_w.pt')
             else:
-                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_v2_cpu.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_w_cpu.pt')
         else:
             if device == 'cuda':
-                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_v2_best.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_w_best.pt')
             else:
-                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_v2_cpu_best.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/kg_w_cpu_best.pt')
 
     def load(self, best=False, device='cuda'):
         """
@@ -193,14 +193,14 @@ class KGPillRecognitionModel:
         """
         if not best:
             if device == 'cuda':
-                self.model.load_state_dict(torch.load('logs/checkpoints/kg_v2.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/kg_w.pt'))
             else:
-                self.model.load_state_dict(torch.load('logs/checkpoints/kg_v2_cpu.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/kg_w_cpu.pt'))
         else:
             if device == 'cuda':
-                self.model.load_state_dict(torch.load('logs/checkpoints/kg_v2_best.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/kg_w_best.pt'))
             else:
-                self.model.load_state_dict(torch.load('logs/checkpoints/kg_v2_cpu_best.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/kg_w_cpu_best.pt'))
                 
     def __str__(self):
         """

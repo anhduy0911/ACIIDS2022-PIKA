@@ -16,8 +16,8 @@ def seed_everything(seed: int):
     torch.backends.cudnn.benchmark = True
 
 def main(args):
-    model = BaseModel(args)
-    # model = KGPillRecognitionModel(args)
+    # model = BaseModel(args)
+    model = KGPillRecognitionModel(args)
     # model.train()
     model.evaluate()
     # model.save_cpu(best=True)

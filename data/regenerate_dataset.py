@@ -43,15 +43,79 @@ def generate_new_dataset():
                         shutil.copy(CFG.train_folder + pres + '/' + drug + '/' + file, CFG.test_folder_new + drug)
                         drug_dict['test'][drug] += 1
                         continue
-        
 
-def test_dataset():
+def prepare_prescription_dataset(json_file, graph_path='./data/converted_graph/vectors_u.dat'):
+    import os
+
+    training_path = './data/prescriptions/train/'
+    test_path = './data/prescriptions/test/'
+    mapped_pills_dict = {}
+
+    def read_graph_embedding(graph_path):
+        g_embedding = {}
+        with open(graph_path) as f:
+            lines = f.readlines()
+            for line in lines:
+                pill_name, ebd = line.strip().split('@')
+                g_embedding[pill_name] = ebd
+                mapped_pills_dict[pill_name] = ""
+        return g_embedding
+    
+    g_embedding = read_graph_embedding(graph_path)
+
+    drugs = list(mapped_pills_dict.keys())
+    with open(json_file) as f:
+        data = json.load(f)
+        for pres in data:
+            filename = pres['id']
+            # drugs = pres['drugname']
+            if (os.path.isfile(training_path + filename)):
+                with open(training_path + filename) as f:
+                    data_inner = json.load(f)
+                    for box in data_inner:
+                        if box['label'] == 'drugname':
+                            mapped_name = box['mapping']
+                            actual_name = box['text'][3:]
+                            if actual_name in drugs:
+                                # print(f'The intial mapped name is {mapped_pills_dict.get(actual_name, "NONE")}')
+                                mapped_pills_dict[actual_name] = mapped_name
+                                print(f'{actual_name} -> {mapped_name}')  
+                            else: 
+                                print(f'{actual_name} -> NONE') 
+
+            elif (os.path.isfile(test_path + filename)):
+                with open(test_path + filename) as f:
+                    data_inner = json.load(f)
+                    for box in data_inner:
+                        if box['label'] == 'drugname':
+                            mapped_name = box['mapping']
+                            actual_name = box['text'][3:]
+                            if actual_name in drugs:
+                                # print(f'The intial mapped name is {mapped_pills_dict.get(actual_name, "NONE")}')
+                                mapped_pills_dict[actual_name] = mapped_name
+                                print(f'{actual_name} -> {mapped_name}')  
+                            else: 
+                                print(f'{actual_name} -> NONE')  
+            else: 
+                print(f'{filename} is not found')
+    # print(len(mapped_pills_dict.keys()))
+    # for pill in mapped_pills_dict.keys():
+    #     if mapped_pills_dict[pill] == "":
+    #         print(pill)
+
+    with open('./data/converted_graph/mapped_pills_deepwalk_w.dat', 'w') as f:
+        for pill, mapped_pill in mapped_pills_dict.items():
+            if mapped_pill != "":
+                f.write(pill + '\\' + mapped_pill + '\\' + g_embedding[pill] + '\n')
+
+
+def test_dataset(g_embedding_path):
     drugs = [d.name for d in os.scandir(CFG.test_folder_new) if d.is_dir()]
     # print(len(drugs))
     def get_label_index():
         labels = []
         g_embedding = []
-        with open(CFG.g_embedding_path) as f:
+        with open(g_embedding_path) as f:
             lines = f.readlines()
             for line in lines:
                 _, mapped_pill, ebd = line.strip().split('\\')
@@ -70,7 +134,9 @@ def test_dataset():
         # print(drug_emds.shape)
         condensed_g_embedding[drug] = np.mean(drug_emds, axis=0).squeeze().tolist()
 
-    json.dump(condensed_g_embedding, open('data/converted_graph/condened_g_embedding.json', 'w'))
+    print(len(condensed_g_embedding.keys()))
+    json.dump(condensed_g_embedding, open('data/converted_graph/condened_g_embedding_deepwalk_w.json', 'w'))
 
 if __name__ == "__main__":
-    test_dataset()
+    
+    test_dataset('./data/converted_graph/mapped_pills_deepwalk_w.dat')
