@@ -154,14 +154,14 @@ class BaseModel:
         """
         if not best:
             if device == 'cuda':
-                torch.save(self.model.state_dict(), 'logs/checkpoints/baseline.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/' + self.args.name + '.pt')
             else:
-                torch.save(self.model.state_dict(), 'logs/checkpoints/baseline_cpu.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/' + self.args.name + '_cpu.pt')
         else:
             if device == 'cuda':
-                torch.save(self.model.state_dict(), 'logs/checkpoints/baseline_best.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/' + self.args.name + '_best.pt')
             else:
-                torch.save(self.model.state_dict(), 'logs/checkpoints/baseline_cpu_best.pt')
+                torch.save(self.model.state_dict(), 'logs/checkpoints/' + self.args.name + '_cpu_best.pt')
 
     def load(self, best=False, device='cuda'):
         """
@@ -169,14 +169,14 @@ class BaseModel:
         """
         if not best:
             if device == 'cuda':
-                self.model.load_state_dict(torch.load('logs/checkpoints/baseline.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/' + self.args.name + '.pt'))
             else:
-                self.model.load_state_dict(torch.load('logs/checkpoints/baseline_cpu.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/' + self.args.name + '_cpu.pt'))
         else:
             if device == 'cuda':
-                self.model.load_state_dict(torch.load('logs/checkpoints/baseline_best.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/' + self.args.name + '_best.pt'))
             else:
-                self.model.load_state_dict(torch.load('logs/checkpoints/baseline_cpu_best.pt'))
+                self.model.load_state_dict(torch.load('logs/checkpoints/' + self.args.name + '_cpu_best.pt'))
 
     def __str__(self):
         """

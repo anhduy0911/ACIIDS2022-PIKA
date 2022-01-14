@@ -50,7 +50,8 @@ if __name__ == '__main__':
                         help='how many epoches to wait before saving model')
     parser.add_argument('--save-folder', type=str, default="logs/checkpoints", metavar='N',
                         help='how many epoches to wait before saving model')
-    
+    parser.add_argument('--name', type=str, default="baseline", metavar='N',
+                        help='name of saving model')
     args = parser.parse_args()
     seed_everything(CFG.seed_number)
     main(args)
