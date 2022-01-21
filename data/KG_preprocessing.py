@@ -113,6 +113,13 @@ def prepare_prescription_dataset(json_file, graph_path='./data/converted_graph/v
         for pill, mapped_pill in mapped_pills_dict.items():
             if mapped_pill != "":
                 f.write(pill + '\\' + mapped_pill + '\\' + g_embedding[pill] + '\n')
+    
+    import pandas as pd
+    df = pd.DataFrame()
+    df['pill'] = list(mapped_pills_dict.keys())
+    df['mapped_pill'] = list(mapped_pills_dict.values())
+
+    df.to_csv('data/converted_graph/mapped_name.csv', index=False)
 
 
 def test():

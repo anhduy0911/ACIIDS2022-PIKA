@@ -42,9 +42,9 @@ class MetricLogger:
             plt.savefig(CFG.log_dir_run + self.type + '.png')
             
             np.save(CFG.log_dir_run + self.type + '.npy', classify_matr)
-            for k, v in n_per_class.items():
-                if v != 0:
-                    print('\n' + f'class {k}: {v}')
+            # for k, v in n_per_class.items():
+            #     if v != 0:
+            #         print('\n' + f'class {k}: {v}')
 
         if not self.train:
             walk_cooccurence()

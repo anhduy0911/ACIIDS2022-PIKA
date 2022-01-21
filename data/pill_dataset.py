@@ -59,6 +59,10 @@ if __name__ == '__main__':
     # print(CFG)
     pill_dts = PillFolder(CFG.train_folder_new)
     print(pill_dts.g_embedding_np.shape)
+    pill_mapping = pill_dts.class_to_idx
+
+    with open('data/converted_graph/mapdict.json', 'w', encoding='utf8') as f:
+        json.dump(pill_mapping, f, ensure_ascii=False)
     # pill_dts = PillFolder(CFG.train_folder, CFG.label_dict, pill_dts.transform)
     # dt_loader = DataLoader(pill_dts, batch_size=32, shuffle=True)
     # cnt = 0
