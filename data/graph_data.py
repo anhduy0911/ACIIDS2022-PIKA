@@ -43,6 +43,22 @@ def build_data():
     # print(data)
     return data
 
+def build_adj_matrix():
+    mapped_pill_idx = json.load(open('data/converted_graph/mapdict.json', 'r'))
+    mapped_name = pd.read_csv('data/converted_graph/mapped_name.csv', header=0)
+    adj_matrix = np.zeros((CFG.n_class, CFG.n_class))
+
+    pill_edge = pd.read_csv('data/converted_graph/pill_edge.dat', names= ["pillA","pillB","tfidf"], sep = "@")
+    pill_edge['pillA'] = pill_edge['pillA'].map(lambda a : mapped_name[mapped_name['pill'] == a].values[0][-1])
+    pill_edge['pillB'] = pill_edge['pillB'].map(lambda a : mapped_name[mapped_name['pill'] == a].values[0][-1])
+    # print(pill_edge.head(5))
+    pill_edge.dropna(inplace=True)
+
+    for x, y, w in pill_edge.values:
+        adj_matrix[mapped_pill_idx[x], mapped_pill_idx[y]] = w
+    
+    return adj_matrix
+
 def visualize_graph():
     mapped_pill_idx = json.load(open('data/converted_graph/mapdict.json', 'r'))
     xs = mapped_pill_idx.keys()
