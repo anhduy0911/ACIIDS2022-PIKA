@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from tqdm import tqdm as tqdm
-from data.pill_dataset import PillFolder
+# from data.pill_dataset import PillFolder
+from data.pill_dataset_v2 import PillDataset
 import config as CFG
 from models.modules import ImageEncoder
 from utils.metrics import MetricLogger
@@ -20,12 +21,12 @@ class BaseModel:
         self.args = args
         self.device = torch.device("cuda" if args.cuda else "cpu")
 
-        self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_fewshot), PillFolder(CFG.test_folder_new, mode='test')
-        self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
+        # self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_new), PillFolder(CFG.test_folder_new, mode='test')
+        # self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
+        self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
+        self.es = EarlyStopping(patience=args.patience)
 
-        self.es = EarlyStopping(patience=5)
-
-        self.model = ImageEncoder()
+        self.model = ImageEncoder(model_name=args.backbone)
         self.model.to(self.device)
         print(self.model)
 
@@ -73,6 +74,7 @@ class BaseModel:
                 _, outputs = self.model(x)
                 _, y_pred = torch.max(outputs, 1)
                 
+                logger.update_val(preds=y_pred, targets=y)
                 runn_acc_val += torch.sum(y_pred == y)
             
             epoch_acc_val = runn_acc_val.double() / sample_eval_len
@@ -145,6 +147,12 @@ class BaseModel:
         preds = torch.cat(preds).cpu().detach().numpy()
         gtrs = torch.cat(gtrs).cpu().detach().numpy()
         report = classification_report(gtrs, preds, output_dict=True, zero_division=0)
+        
+        import json
+        json_report = json.dumps(report)
+        with open(CFG.log_dir_run + self.args.name, 'w') as f:
+            f.write(json_report)
+        
         print(report['weighted avg'])
     
     def test(self):

@@ -137,6 +137,46 @@ def test_dataset(g_embedding_path):
     print(len(condensed_g_embedding.keys()))
     json.dump(condensed_g_embedding, open('data/converted_graph/condened_g_embedding_deepwalk_w.json', 'w'))
 
-if __name__ == "__main__":
+def generate_new_dataset_v2():
+    # def get_label_index():
+    #     labels = []
+    #     g_embedding = []
+    #     with open(CFG.g_embedding_path) as f:
+    #         lines = f.readlines()
+    #         for line in lines:
+    #             _, mapped_pill, ebd = line.strip().split('\\')
+    #             labels.append(mapped_pill)
+    #             g_embedding.append([float(x) for x in ebd.split(' ')])
+
+    #     return labels, g_embedding
     
-    test_dataset('./data/converted_graph/mapped_pills_deepwalk_w.dat')
+    # labels, _ = get_label_index()
+    train_pres = [d.name for d in os.scandir(CFG.train_folder) if d.is_dir()]
+    train_limit = 6
+    test_limit = 3
+    drug_dict = {'train': {},'test':{}}
+    for pres in train_pres:
+        drugs = [d.name for d in os.scandir(CFG.train_folder + pres) if d.is_dir()]
+        for drug in drugs:
+            for _, _, files in os.walk(CFG.train_folder + pres + '/' + drug):
+                for file in files:
+                    if not os.path.isdir(CFG.train_folder_v2 + pres + '/' + drug):
+                        os.makedirs(CFG.train_folder_v2 + pres + '/' + drug)
+                        drug_dict['train'][drug] = 0
+                    if not os.path.isdir(CFG.test_folder_v2 + pres + '/' + drug):
+                        os.makedirs(CFG.test_folder_v2 + pres + '/' + drug)
+                        drug_dict['test'][drug] = 0
+                        
+                    if drug_dict['train'][drug] < train_limit:
+                        shutil.copy(CFG.train_folder + pres + '/' + drug + '/' + file, CFG.train_folder_v2 + pres + '/' + drug + '/' + file)
+                        drug_dict['train'][drug] += 1
+                        continue
+                    if drug_dict['test'][drug] < test_limit:
+                        print('test_fd')
+                        shutil.copy(CFG.train_folder + pres + '/' + drug + '/' + file, CFG.test_folder_v2 + pres + '/' + drug + '/' + file)
+                        drug_dict['test'][drug] += 1
+                        continue
+
+if __name__ == "__main__":
+    # test_dataset('./data/converted_graph/mapped_pills_deepwalk_w.dat')
+    generate_new_dataset_v2()

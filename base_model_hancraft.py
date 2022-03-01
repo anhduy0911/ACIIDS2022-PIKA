@@ -1,16 +1,16 @@
+from sklearn.metrics import classification_report
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from tqdm import tqdm as tqdm
-from data.pill_dataset_v2 import PillFolder, PillDataset
-# from data.pill_dataset import PillFolder
+from data.pill_dataset_hancraft import PillFolder
 import config as CFG
-from models.KGbased_model import KGBasedModel
+from models.modules import ImageEncoderHancraft
 from utils.metrics import MetricLogger
 from utils.utils import EarlyStopping
 
-class KGPillRecognitionModel:
+class BaseModel:
     def __init__(self, args):
         """
         Model wrapper for all models
@@ -20,88 +20,65 @@ class KGPillRecognitionModel:
 
         self.args = args
         self.device = torch.device("cuda" if args.cuda else "cpu")
-        self.es = EarlyStopping(args.patience)
 
-        # self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_fewshot), PillFolder(CFG.test_folder_new, mode='test')
-        # self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
-        self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
+        self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_new), PillFolder(CFG.test_folder_new, mode='test')
+        self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
 
-        self.g_embedding = self.train_loader.g_embedding_np.to(self.device)
-        # self.g_embedding = self.train_dataset.g_embedding_np.to(self.device)
-        self.model = KGBasedModel(backbone_name=args.backbone)
+        self.es = EarlyStopping(patience=50)
+
+        self.model = ImageEncoderHancraft()
         self.model.to(self.device)
-
-        # print(self.model)
+        print(self.model)
 
     def train(self):
         """
         Train the model
         """
-        # import time
-        categorical_func_1 = torch.nn.CrossEntropyLoss()
-        # categorical_func_2 = torch.nn.CrossEntropyLoss()
-        domain_linkage_func = torch.nn.CosineEmbeddingLoss()
-
+        loss_func = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=0.001)
-        # optimizer_projection = torch.optim.AdamW(self.model.projection.parameters(), lr=0.001)
-        # start_time = time.time()
+        
         self.model.train()
-        logger = MetricLogger(args=self.args, tags=['KG_deepwalk_w', 'train'])
+        logger = MetricLogger(args=self.args, tags=['train'])
         prev_val_acc = 0
         for epoch in tqdm(range(self.args.epochs)):
             running_loss = 0.0
             running_corrects = 0
             sample_len = 0
 
-            for x, y, g in self.train_loader:
-                # x, y, g = self.train_dataset[i]
-                bs = y.shape[0]
-                sample_len += bs
-                # print(f'1: {time.time() - start_time}')
-                # start_time = time.time()
+            for x, x_c, x_t, y, _  in self.train_loader:
                 x = x.to(self.device)
+                x_c = x_c.to(self.device)
+                x_t = x_t.to(self.device)
+                sample_len += y.shape[0]
                 y = y.to(self.device)
-                g = g.to(self.device)
-                # print(f'2: {time.time() - start_time}')
-                # start_time = time.time()
+                
                 optimizer.zero_grad()
-                # optimizer_projection.zero_grad()
-                _, mapped_ebd, outputs = self.model(x, self.g_embedding)
-                # print(f'3: {time.time() - start_time}')
-                # start_time = time.time()
+                _, outputs = self.model(x, x_c, x_t)
                 _, y_pred = torch.max(outputs, 1)
-                # print(f'4: {time.time() - start_time}')
-                # start_time = time.time()
+                
                 logger.update(preds=y_pred, targets=y, conf_scores=outputs)
-
-                closs_1 = categorical_func_1(outputs, y)
-                # closs_1.backward()
-                # optimizer.step()
-                # closs_2 = categorical_func_2(pseudo_outputs, y)
-                dloss = domain_linkage_func(mapped_ebd, g, torch.ones(bs).to(self.device))
-                # dloss.backward()
-                # optimizer_projection.step()
-                # print(f'5: {time.time() - start_time}')
-                # start_time = time.time()
-                total_loss = closs_1 + 0.1 * dloss
-                total_loss.backward()
+                # print(y_pred)
+                # print(y)
+                loss = loss_func(outputs, y)
+                loss.backward()
                 optimizer.step()
-                # print(f'6: {time.time() - start_time}')
-                # start_time = time.time()
-                running_loss += total_loss.item() * x.size(0)
-                running_corrects += torch.sum(y_pred == y)
 
-            self.model.eval()
+                running_loss += loss.item() * x.size(0)
+                running_corrects += torch.sum(y_pred == y)
+            
             sample_eval_len = 0
             runn_acc_val = 0
-            for x, y, _ in self.test_loader:
+            for x, x_c, x_t, y, _ in self.test_loader:
                 sample_eval_len += x.shape[0]
-                x = x.to(self.device)
-                y = y.to(self.device)
-                _, _, outputs = self.model(x, self.g_embedding)
-                _, y_pred = torch.max(outputs, 1)
 
-                logger.update_val(preds=y_pred, targets=y)
+                x = x.to(self.device)
+                x_c = x_c.to(self.device)
+                x_t = x_t.to(self.device)
+
+                y = y.to(self.device)
+                _, outputs = self.model(x, x_c, x_t)
+                _, y_pred = torch.max(outputs, 1)
+                
                 runn_acc_val += torch.sum(y_pred == y)
             
             epoch_acc_val = runn_acc_val.double() / sample_eval_len
@@ -109,9 +86,9 @@ class KGPillRecognitionModel:
             epoch_loss = running_loss / sample_len
             epoch_acc = running_corrects.double() / sample_len
             logger.log_metrics(epoch_loss, val_acc=epoch_acc_val, step=epoch)
-            print('{} Loss: {:.4f} Acc: {:.4f} Val_Acc: {:.4f}'.format(
-                epoch, epoch_loss, epoch_acc, epoch_acc_val))
-        
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
+                epoch, epoch_loss, epoch_acc))
+
             self.es(-epoch_acc_val)
             if self.es.early_stop:
                 print("Early stopping...")
@@ -134,47 +111,61 @@ class KGPillRecognitionModel:
         loss_func = torch.nn.CrossEntropyLoss()
         
         self.model.eval()
-        logger = MetricLogger(args=self.args, tags=['KG_deepwalk_w', 'test'])
-
+        # logger = MetricLogger(args=self.args, tags=['test'])
+        print('Hehehe')
         running_loss = 0.0
         running_corrects = 0
         sample_len = 0
+
+        preds = []
+        gtrs = []
         # cnt = 0
-        for x, y, _ in self.test_loader:
+        print('Start Evaluating...')
+        print(f'Batch_size: {self.args.v_batch_size}')
+        for x, x_c, x_t, y, _ in self.test_loader:
             sample_len += y.shape[0]
 
             x = x.to(self.device)
+            x_c = x_c.to(self.device)
+            x_t = x_t.to(self.device)
             y = y.to(self.device)
             # print(cnt)
-            _, _, outputs = self.model(x, self.g_embedding)
+            _, outputs = self.model(x, x_c, x_t)
             _, y_pred = torch.max(outputs, 1)
-            logger.update(preds=y_pred, targets=y, conf_scores=outputs)
-            logger.update_val(preds=y_pred, targets=y)
             
+            preds.append(y_pred)
+            gtrs.append(y)
+
+            # logger.update(preds=y_pred, targets=y, conf_scores=outputs)
             # print(y_pred)
             # print(y)
             loss = loss_func(outputs, y)
             
             running_loss += loss.item() * x.size(0)
             running_corrects += torch.sum(y_pred == y)
-
+            
         epoch_loss = running_loss / sample_len
         epoch_acc = running_corrects.double() / sample_len
-        logger.log_metrics(epoch_loss, step=1)
+        # logger.log_metrics(epoch_loss, step=1)
         print('Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
+
+        preds = torch.cat(preds).cpu().detach().numpy()
+        gtrs = torch.cat(gtrs).cpu().detach().numpy()
+        report = classification_report(gtrs, preds, output_dict=True, zero_division=0)
+        print(report['weighted avg'])
 
     def test(self):
         for x, y, _ in self.test_dataset:
             print(x.shape)
             print(y.shape)
 
-    def save_cpu(self):
+    def save_cpu(self, best=True):
         """
         Save the model on CPU
         """
-        self.load(best=True)
+        self.load(best=best)
         self.model.cpu()
-        self.save(device='cpu')
+        self.save(device='cpu', best=best)
 
     def save(self, best=False, device='cuda'):
         """
@@ -205,7 +196,7 @@ class KGPillRecognitionModel:
                 self.model.load_state_dict(torch.load('logs/checkpoints/' + self.args.name + '_best.pt'))
             else:
                 self.model.load_state_dict(torch.load('logs/checkpoints/' + self.args.name + '_cpu_best.pt'))
-                
+
     def __str__(self):
         """
         Return a string representation of the model

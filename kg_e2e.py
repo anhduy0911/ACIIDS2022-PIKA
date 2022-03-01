@@ -1,9 +1,11 @@
+from sklearn.metrics import classification_report
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from tqdm import tqdm as tqdm
-from data.pill_dataset import PillFolder
+# from data.pill_dataset import PillFolder
+from data.pill_dataset_v2 import PillFolder, PillDataset
 import config as CFG
 from models.KGBased_e2emodel import KGBasedModel
 from utils.metrics import MetricLogger
@@ -22,11 +24,12 @@ class KGPillRecognitionModel:
         self.device = torch.device("cuda" if args.cuda else "cpu")
         self.es = EarlyStopping(CFG.early_stop)
 
-        self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_new), PillFolder(CFG.test_folder_new, mode='test')
-        self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
+        # self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_new), PillFolder(CFG.test_folder_new, mode='test')
+        # self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
+        self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
 
         self.g_embedding = build_data()
-        self.model = KGBasedModel()
+        self.model = KGBasedModel(backbone=args.backbone)
 
         self.model.to(self.device)
         self.g_embedding = self.g_embedding.to(self.device)
@@ -99,7 +102,8 @@ class KGPillRecognitionModel:
                 y = y.to(self.device)
                 _, _, outputs = self.model(x, self.g_embedding)
                 _, y_pred = torch.max(outputs, 1)
-                
+                logger.update_val(preds=y_pred, targets=y)
+
                 runn_acc_val += torch.sum(y_pred == y)
             
             epoch_acc_val = runn_acc_val.double() / sample_eval_len
@@ -132,14 +136,17 @@ class KGPillRecognitionModel:
         """
         self.load(best=True, device='cuda' if self.args.cuda else 'cpu')
         loss_func = torch.nn.CrossEntropyLoss()
-        
         self.model.eval()
-        logger = MetricLogger(args=self.args, tags=['test'])
+        # logger = MetricLogger(args=self.args, tags=['test'])
 
         running_loss = 0.0
         running_corrects = 0
         sample_len = 0
         # cnt = 0
+
+        preds = []
+        gtrs = []
+
         for x, y, _ in self.test_loader:
             sample_len += y.shape[0]
 
@@ -148,10 +155,13 @@ class KGPillRecognitionModel:
             # print(cnt)
             _, _, outputs = self.model(x, self.g_embedding)
             _, y_pred = torch.max(outputs, 1)
-            logger.update(preds=y_pred, targets=y, conf_scores=outputs)
+            # logger.update(preds=y_pred, targets=y, conf_scores=outputs)
             
             # print(y_pred)
             # print(y)
+            preds.append(y_pred)
+            gtrs.append(y)
+
             loss = loss_func(outputs, y)
             
             running_loss += loss.item() * x.size(0)
@@ -159,9 +169,13 @@ class KGPillRecognitionModel:
 
         epoch_loss = running_loss / sample_len
         epoch_acc = running_corrects.double() / sample_len
-        logger.log_metrics(epoch_loss, step=1)
+        # logger.log_metrics(epoch_loss, step=1)
         print('Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
-
+        preds = torch.cat(preds).cpu().detach().numpy()
+        gtrs = torch.cat(gtrs).cpu().detach().numpy()
+        report = classification_report(gtrs, preds, output_dict=True, zero_division=0)
+        print(report['weighted avg'])
+        
     def test(self):
         for x, y, _ in self.test_dataset:
             print(x.shape)

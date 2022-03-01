@@ -4,10 +4,10 @@ from models.modules import GCN, ImageEncoder
 import config as CFG
 
 class KGBasedModel(nn.Module):
-    def __init__(self, hidden_size=CFG.g_embedding_features, num_class=CFG.n_class):
+    def __init__(self, hidden_size=CFG.g_embedding_features, num_class=CFG.n_class, backbone=CFG.image_model_name):
         super().__init__()
 
-        self.backbone = self.setup_backborn_model()
+        self.backbone = self.setup_backborn_model(backbone)
         self.gcn = GCN(hidden_size)
         hidden_visual_features = self.backbone.visual_features
         self.projection = nn.Sequential(
@@ -15,16 +15,16 @@ class KGBasedModel(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_size * 2, hidden_size),
             nn.ReLU(),
-        ) 
+        )
 
         self.attention_dense = nn.Linear(hidden_size + hidden_visual_features, hidden_size)
         self.classifier = nn.Linear(hidden_size, num_class)
 
-    def setup_backborn_model(self):
-        model = ImageEncoder()
+    def setup_backborn_model(self, model_name):
+        model = ImageEncoder(model_name=model_name)
         model.load_state_dict(torch.load(CFG.backbone_path))
         for param in model.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
         
         return model
     

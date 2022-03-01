@@ -14,18 +14,24 @@ import seaborn as sns
 
 class MetricLogger:
     def __init__(self, project_name='KGbased_PillRecognition', args=None, tags=None):
-        self.run = wandb.init(args.name, entity='aiotlab', config=args, tags=tags, group='GNN')
+        self.run = wandb.init(args.name, entity='aiotlab', config=args, tags=tags, group='Phase3')
         self.type = '_'.join(tags)
+        self.args = args
         self.run.name = args.name + '_' + self.type
         self.train = tags[0] == 'train'
         self.metrics = {}
         self.preds = []
         self.targets = []
+        self.preds_val = []
+        self.targets_val = []
         self.target_conf_scores = []
 
     def calculate_metrics(self):
         preds = torch.cat(self.preds).cpu().detach().numpy()
         targets = torch.cat(self.targets).cpu().detach().numpy()
+
+        preds_val = torch.cat(self.preds_val).cpu().detach().numpy()
+        targets_val = torch.cat(self.targets_val).cpu().detach().numpy()
         
         def walk_cooccurence():
             pred_ls = preds.tolist()
@@ -39,9 +45,9 @@ class MetricLogger:
                 classify_matr[lab, p] += 1
             
             sns.heatmap(classify_matr, linewidths=0.5)
-            plt.savefig(CFG.log_dir_run + self.type + '.png')
+            plt.savefig(CFG.log_dir_run + self.args.name + '.png')
             
-            np.save(CFG.log_dir_run + self.type + '.npy', classify_matr)
+            np.save(CFG.log_dir_run + self.args.name + '.npy', classify_matr)
             # for k, v in n_per_class.items():
             #     if v != 0:
             #         print('\n' + f'class {k}: {v}')
@@ -50,19 +56,27 @@ class MetricLogger:
             walk_cooccurence()
         
         acc = accuracy_score(targets, preds)
-        self.metrics['accuracy'] = acc
+        self.metrics['train/accuracy'] = acc
+
+        acc_val = accuracy_score(targets_val, preds_val)
+        self.metrics['val/accuracy'] = acc_val
         # ap = average_precision_score(target_conf_scores, conf_scores)
         # ap = self.calculate_average_precision()
         # self.metrics['AP'] = ap
 
         report = classification_report(targets, preds, output_dict=True, zero_division=0)
+        report_val = classification_report(targets_val, preds_val, output_dict=True, zero_division=0)
 
         dict_avg = report['weighted avg']
         for k in dict_avg.keys():
-            self.metrics[k] = dict_avg[k]
+            self.metrics[f'train/{k}'] = dict_avg[k]
         
-        json_report = json.dumps(report)
-        with open(CFG.log_dir_run + self.type, 'w') as f:
+        dict_avg = report_val['weighted avg']
+        for k in dict_avg.keys():
+            self.metrics[f'val/{k}'] = dict_avg[k]
+        
+        json_report = json.dumps(report_val)
+        with open(CFG.log_dir_run + self.args.name + '_' + self.type, 'w') as f:
             f.write(json_report)
     
     def update(self, preds: torch.Tensor, targets: torch.Tensor, conf_scores: torch.Tensor):
@@ -70,18 +84,26 @@ class MetricLogger:
         self.preds.append(preds)
         self.targets.append(targets)
         self.target_conf_scores.append(conf_scores)
+    
+    def update_val(self, preds: torch.Tensor, targets: torch.Tensor):
+        # print(f'append {preds}')
+        assert preds.shape == targets.shape
+        self.preds_val.append(preds)
+        self.targets_val.append(targets)
 
     def reset(self):
         self.metrics.clear()
         self.preds.clear()
         self.targets.clear()
+        self.preds_val.clear()
+        self.targets_val.clear()
         self.target_conf_scores.clear()
 
 
     def log_metrics(self, loss, step, val_acc=None):
-        self.metrics['loss'] = loss
+        self.metrics['train/loss'] = loss
         if val_acc:
-            self.metrics['val_acc'] = val_acc
+            self.metrics['val/val_acc'] = val_acc
         self.calculate_metrics()
         self.run.log(data=self.metrics, step=step)
         self.reset()

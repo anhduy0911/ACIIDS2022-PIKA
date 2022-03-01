@@ -1,6 +1,7 @@
 import argparse
 import config as CFG
 from base_model import BaseModel
+from base_model_hancraft import BaseModel as BaseModelHandCraft
 from kg_e2e import KGPillRecognitionModel
 from kg_assisted_model import KGPillRecognitionModel as KGPillRecognitionModel_assisted
 def seed_everything(seed: int):
@@ -17,9 +18,10 @@ def seed_everything(seed: int):
     torch.backends.cudnn.benchmark = True
 
 def main(args):
-    model = BaseModel(args)
+    # model = BaseModel(args)
+    # model = BaseModelHandCraft(args)
     # model = KGPillRecognitionModel(args)
-    # model = KGPillRecognitionModel_assisted(args)
+    model = KGPillRecognitionModel_assisted(args)
     # model.train()
     model.evaluate()
     # model.save_cpu(best=True)
@@ -46,15 +48,13 @@ if __name__ == '__main__':
                         help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=911, metavar='S',
                         help='random seed (default: 911)')
-    parser.add_argument('--log-interval', type=int, default=1, metavar='N',
-                        help='how many batches to wait before logging training status')
-    parser.add_argument('--save-interval', type=int, default=1, metavar='N',
-                        help='how many epoches to wait before saving model')
-    parser.add_argument('--save-folder', type=str, default="logs/checkpoints", metavar='N',
-                        help='how many epoches to wait before saving model')
     parser.add_argument('--name', type=str, default="baseline", metavar='N',
                         help='name of saving model')
-    
+    parser.add_argument('--patience', type=int, default=20, metavar='N',
+                        help='patience of early stopping')
+    parser.add_argument('--backbone', type=str, default="resnet50", metavar='N', help='choose backbone model')
+
     args = parser.parse_args()
+    print(args)
     seed_everything(CFG.seed_number)
     main(args)
