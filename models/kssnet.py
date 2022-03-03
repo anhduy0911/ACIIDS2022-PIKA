@@ -34,7 +34,7 @@ class GraphConvolution(nn.Module):
 
     def forward(self, input):
         support = torch.matmul(input, self.weight)
-        print(self.adj.size(), support.size())
+        # print(self.adj.size(), support.size())
         output = torch.matmul(self.adj, support)
         if self.bias is not None:
             return output + self.bias
@@ -94,7 +94,7 @@ class KSSNet(nn.Module):
 
         self.gap = nn.AdaptiveAvgPool2d(1)
 
-        self.fc = nn.Linear(2048, 80)
+        self.fc = nn.Linear(2048, 76)
 
     def forward(self, x, word_embedding):
         x = self.conv1(x)
@@ -126,11 +126,10 @@ class KSSNet(nn.Module):
         x = feat.view(feat.size(0), -1)
         e = e.transpose(0,1)
         y = self.fc(x)
-        y = torch.sigmoid(y)
         return y
 
 if __name__ == "__main__":
     kssnet = KSSNet()
-    x = torch.rand((32, 3, 224, 224))
+    x = torch.rand((19, 3, 224, 224))
     word_embedding = torch.rand((76, 64))
     out = kssnet(x,word_embedding)

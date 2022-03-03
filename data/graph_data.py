@@ -115,7 +115,51 @@ def visualize_graph():
     plt.tight_layout()
     plt.savefig(CFG.log_dir_data + 'graph.png', dpi=500)
 
+def get_hidden_states(encoded, token_ids_word, model, layers):
+    """Push input IDs through model. Stack and sum `layers` (last four by default).
+    Select only those subword token outputs that belong to our word of interest
+    and average them."""
+    with torch.no_grad():
+        output = model(**encoded)
+
+    # Get all hidden states
+    states = output.hidden_states
+    # Stack and sum all requested layers
+    output = torch.stack([states[i] for i in layers]).sum(0).squeeze()
+    # Only select the tokens that constitute the requested word
+    word_tokens_output = output[token_ids_word]
+
+    return word_tokens_output.mean(dim=0)
+ 
+
+def get_word_vector(sent, idx, tokenizer, model, layers):
+    """Get a word vector by first tokenizing the input sentence, getting all token idxs
+        that make up the word of interest, and then `get_hidden_states`."""
+    encoded = tokenizer.encode_plus(sent, return_tensors="pt")
+    # get all token idxs that belong to the word of interest
+    token_ids_word = np.where(np.array(encoded.word_ids()) == idx)
+
+    return get_hidden_states(encoded, token_ids_word, model, layers)
+
+def build_label_embedding():
+    from transformers import AutoTokenizer, AutoModel
+    mapped_pill_idx = json.load(open('data/converted_graph/mapdict.json', 'r'))
+    names = mapped_pill_idx.keys()
+    
+    layers = [-4, -3, -2, -1]
+    tokenizer = AutoTokenizer.from_pretrained('dmis-lab/biosyn-sapbert-bc5cdr-chemical') # biobert for chemical - mostly resemble Drugname
+    model = AutoModel.from_pretrained('dmis-lab/biosyn-sapbert-bc5cdr-chemical', output_hidden_states=True)
+
+    word_ebd = []
+    for sent in names:
+        word_ebd.append(get_word_vector(sent, 0, tokenizer, model, layers))
+
+    word_ebd = np.array(word_ebd)
+    np.save('data/converted_graph/pill_word_ebd.npy', word_ebd)
+    
+
 if __name__ == '__main__':
     # build_data()
     import matplotlib.pyplot as plt
-    visualize_graph()
+    # visualize_graph()
+    build_label_embedding()

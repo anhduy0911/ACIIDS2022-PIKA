@@ -5,12 +5,16 @@ from tqdm import tqdm
 import os
 import argparse
 from data.pill_dataset_v2 import PillDataset
+from data.pill_dataset import PillFolder
+from torch.utils.data import DataLoader
 from models import *
 import config as CFG
 from models.kssnet import KSSNet
+from sklearn.metrics import classification_report
 
-def train(args, model, train_loader, test_loader):
-    criterion = nn.BCELoss().to(device)
+
+def train(args, model, train_loader, test_loader, graph_embedding):
+    criterion = nn.CrossEntropyLoss().to(device)
     #criterion = nn.MultiLabelSoftMarginLoss()
     #optimizer = torch.optim.SGD(model.parameters(),
     #                            lr=0.1,
@@ -18,17 +22,19 @@ def train(args, model, train_loader, test_loader):
     #                            weight_decay=1e-4)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[20, 40], gamma=0.1)
-    for epoch in range(20):
-        for idx, ((imgs, img_names, word_embedding), targets) in tqdm(enumerate(train_loader)):
+    for epoch in range(50):
+        for idx, (imgs, targets, _) in tqdm(enumerate(train_loader)):
+            optimizer.zero_grad()
             imgs, targets = imgs.to(device), targets.to(device)
+            graph_embedding = graph_embedding.to(device)
             #import pdb
             #pdb.set_trace()
-            #predicts = model(imgs, word_embedding)
-            predicts = model(imgs)
-            #print(predicts)
+            predicts = model(imgs, graph_embedding)
+            # _, predicts = torch.max(predicts, 1)
+            # predicts = model(imgs)
+            # print(predicts)
             loss = criterion(predicts, targets)
             #print('Epoch: {} | loss: {:.2f} |'.format(epoch+1, loss.item()))
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -40,8 +46,8 @@ def train(args, model, train_loader, test_loader):
         else:
             torch.save(model, args.ckpt)
         if epoch % args.eval_freq == 0:
-            mAP = test(model, test_loader)
-            print("Epoch: {} | mAP: {}".format(epoch, mAP))
+            report = test(model, test_loader, graph_embedding)
+            print(f'epoch: {epoch+1} | loss: {loss.item()} | {report}')
 
 def mean_ap(scores, targets):
     if scores.numel() == 0:
@@ -85,42 +91,53 @@ def average_precision(output, target, difficult_examples=True):
     return precision_at_i
 
 
-def test(model, test_loader):
+def test(model, test_loader, graph_embedding):
     predicts = []
     targets = []
-    for idx, ((imgs, img_names, word_embedding),labels) in tqdm(enumerate(test_loader)):
+    for idx, (imgs,labels, _) in tqdm(enumerate(test_loader)):
         imgs, labels = imgs.cuda(), labels.cuda()
+        graph_embedding = graph_embedding.cuda()
         with torch.no_grad():
-            #predict = model(imgs, word_embedding)
-            predict = model(imgs)
+            predict = model(imgs, graph_embedding)
+            # predict = model(imgs)
+            _, predict = torch.max(predict, 1)
         #print(predict)
         #print(labels)
         targets.append(labels)
         predicts.append(predict)
 
-    predicts = torch.cat(predicts, dim=0)
-    targets = torch.cat(targets, dim=0)
+    predicts = torch.cat(predicts).cpu().detach().numpy()
+    targets = torch.cat(targets).cpu().detach().numpy()
+    report = classification_report(targets, predicts, output_dict=True, zero_division=0)
+    return report['weighted avg']
     #import pdb
     #pdb.set_trace()
-    ap = mean_ap(predicts, targets)
-    return torch.mean(ap).item()
-
-
-mean = [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
+    # ap = mean_ap(predicts, targets)
+    # return torch.mean(ap).item()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('Multi-Label-Classification Task')
     parser.add_argument('--gpu', type=str, default='0,1,2,3')
     parser.add_argument('--batch-size', type=int, default=32, metavar='N', dest='batch_size')
-    parser.add_argument('--val-batch-size', type=int, default=32, metavar='N', dest='v_batch_size')
+    parser.add_argument('--val-batch-size', type=int, default=16, metavar='N', dest='v_batch_size')
     parser.add_argument('--model', type=str, default='kssnet')
+    parser.add_argument('--test', type=bool, default=False)
+    parser.add_argument('--ckpt', type=str, default='logs/checkpoints/kssnet.pt')
+    parser.add_argument('--eval_freq', type=int, default=5)
+    parser.add_argument('--dataset', type=str, default='rand')
 
     args = parser.parse_args()
 
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    train_loader, test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
+    if args.dataset == 'rand':
+        train_dataset, test_dataset = PillFolder(CFG.train_folder_new), PillFolder(CFG.test_folder_new, mode='test')
+        train_loader, test_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(test_dataset, batch_size=args.v_batch_size, shuffle=False)
+        g_embedding = train_dataset.g_embedding_np
+    else:
+        train_loader, test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
+        g_embedding = train_loader.g_embedding_np
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print("Mode: {}".format(device))
     if args.model == 'kssnet':
@@ -128,8 +145,6 @@ if __name__ == "__main__":
     
     if args.test:
         model.load_state_dict(torch.load(args.ckpt).state_dict())
-        model = nn.DataParallel(model)
         test(model, test_loader)
     else:
-        model = nn.DataParallel(model)
-        train(args, model, train_loader, test_loader)
+        train(args, model, train_loader, test_loader, g_embedding)
