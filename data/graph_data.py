@@ -57,6 +57,10 @@ def build_adj_matrix():
     for x, y, w in pill_edge.values:
         adj_matrix[mapped_pill_idx[x], mapped_pill_idx[y]] = w
     
+    import pickle
+    with open('data/converted_graph/pill_adj_matrix.pkl', 'wb') as handle:
+        pickle.dump(adj_matrix, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
     return adj_matrix
 
 def visualize_graph():
@@ -154,7 +158,8 @@ def build_label_embedding():
     for sent in names:
         word_ebd.append(get_word_vector(sent, 0, tokenizer, model, layers))
 
-    word_ebd = np.array(word_ebd)
+    word_ebd = torch.stack(word_ebd).numpy()
+    print(word_ebd.shape)
     np.save('data/converted_graph/pill_word_ebd.npy', word_ebd)
     
 
@@ -163,3 +168,4 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     # visualize_graph()
     build_label_embedding()
+    # build_adj_matrix()
