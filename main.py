@@ -22,8 +22,8 @@ def main(args):
     # model = BaseModelHandCraft(args)
     # model = KGPillRecognitionModel(args)
     model = KGPillRecognitionModel_assisted(args)
-    # model.train()
-    model.evaluate()
+    model.train()
+    # model.evaluate()
     # model.save_cpu(best=True)
 
 if __name__ == '__main__':

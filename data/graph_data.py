@@ -89,35 +89,44 @@ def visualize_graph():
         #     print(f'{mapped_pill_idx[x]} {mapped_pill_idx[y]} {w}')
     
     edge_weight = np.array(edge_weight)
-    print(f'weight max: {np.max(edge_weight)}, min: {np.min(edge_weight)}, mean: {np.mean(edge_weight)}, std: {np.std(edge_weight)}')
-    # data = Data(x=xs, edge_index=torch.tensor(edge_index).t().contiguous(), edge_attr=torch.tensor(edge_weight))
-    G = nx.Graph()
-    G.add_weighted_edges_from(edge_index)
     
-    elarge = [(u, v) for (u, v, d) in G.edges(data=True) if d["weight"] > 4]
-    esmall = [(u, v) for (u, v, d) in G.edges(data=True) if d["weight"] <= 4]
+    fig = plt.figure(figsize =(10, 7))
+    # Creating axes instance
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.ylabel('Edge weight')
+    # Creating plot
+    bp = ax.boxplot(edge_weight)
+    fig.savefig('logs/imgs/boxplot_edges.png') 
+    
+    # print(f'weight max: {np.max(edge_weight)}, min: {np.min(edge_weight)}, mean: {np.mean(edge_weight)}, std: {np.std(edge_weight)}')
+    # # data = Data(x=xs, edge_index=torch.tensor(edge_index).t().contiguous(), edge_attr=torch.tensor(edge_weight))
+    # G = nx.Graph()
+    # G.add_weighted_edges_from(edge_index)
+    
+    # elarge = [(u, v) for (u, v, d) in G.edges(data=True) if d["weight"] > 4]
+    # esmall = [(u, v) for (u, v, d) in G.edges(data=True) if d["weight"] <= 4]
 
-    pos = nx.spring_layout(G, seed=911)  # positions for all nodes - seed for reproducibility
-    # pos = nx.graphviz_layout(G)
-    ill_pred = [1, 11, 14, 15, 20, 27, 31, 32, 36, 41, 42, 52, 56, 66, 75]
-    values = [0.75 if node not in ill_pred else 1.0 for node in G.nodes()]
-    # nodes
-    nx.draw_networkx_nodes(G, pos, cmap=plt.get_cmap('viridis'), node_color=values, node_size=200)
-    # nx.draw_networkx_nodes(G, pos, node_size=200)
-    # edges
-    nx.draw_networkx_edges(G, pos, edgelist=elarge, width=1.2)
-    nx.draw_networkx_edges(
-        G, pos, edgelist=esmall, width=0.05, alpha=0.5, edge_color="b", style="dashed"
-    )
+    # pos = nx.spring_layout(G, seed=911)  # positions for all nodes - seed for reproducibility
+    # # pos = nx.graphviz_layout(G)
+    # ill_pred = [1, 11, 14, 15, 20, 27, 31, 32, 36, 41, 42, 52, 56, 66, 75]
+    # values = [0.75 if node not in ill_pred else 1.0 for node in G.nodes()]
+    # # nodes
+    # nx.draw_networkx_nodes(G, pos, cmap=plt.get_cmap('viridis'), node_color=values, node_size=200)
+    # # nx.draw_networkx_nodes(G, pos, node_size=200)
+    # # edges
+    # nx.draw_networkx_edges(G, pos, edgelist=elarge, width=1.2)
+    # nx.draw_networkx_edges(
+    #     G, pos, edgelist=esmall, width=0.05, alpha=0.5, edge_color="b", style="dashed"
+    # )
 
-    # labels
-    nx.draw_networkx_labels(G, pos, font_color='w', font_size=7, font_family="sans-serif")
+    # # labels
+    # nx.draw_networkx_labels(G, pos, font_color='w', font_size=7, font_family="sans-serif")
 
-    ax = plt.gca()
-    ax.margins(0.08)
-    plt.axis("off")
-    plt.tight_layout()
-    plt.savefig(CFG.log_dir_data + 'graph.png', dpi=500)
+    # ax = plt.gca()
+    # ax.margins(0.08)
+    # plt.axis("off")
+    # plt.tight_layout()
+    # plt.savefig(CFG.log_dir_data + 'graph.png', dpi=500)
 
 def get_hidden_states(encoded, token_ids_word, model, layers):
     """Push input IDs through model. Stack and sum `layers` (last four by default).
@@ -166,6 +175,6 @@ def build_label_embedding():
 if __name__ == '__main__':
     # build_data()
     import matplotlib.pyplot as plt
-    # visualize_graph()
-    build_label_embedding()
+    visualize_graph()
+    # build_label_embedding()
     # build_adj_matrix()

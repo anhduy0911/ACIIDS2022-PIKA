@@ -8,7 +8,7 @@ from data.pill_dataset_v2 import PillFolder, PillDataset
 import config as CFG
 from models.KGbased_model import KGBasedModel
 from utils.metrics import MetricLogger
-from utils.utils import EarlyStopping
+from utils.utils import EarlyStopping, JS_loss_fast_compute
 
 class KGPillRecognitionModel:
     def __init__(self, args):
@@ -40,7 +40,8 @@ class KGPillRecognitionModel:
         # import time
         categorical_func_1 = torch.nn.CrossEntropyLoss()
         # categorical_func_2 = torch.nn.CrossEntropyLoss()
-        domain_linkage_func = torch.nn.CosineEmbeddingLoss()
+        # domain_linkage_func = torch.nn.CosineEmbeddingLoss()
+        domain_linkage_func = JS_loss_fast_compute
 
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=0.001)
         # optimizer_projection = torch.optim.AdamW(self.model.projection.parameters(), lr=0.001)
@@ -78,7 +79,8 @@ class KGPillRecognitionModel:
                 # closs_1.backward()
                 # optimizer.step()
                 # closs_2 = categorical_func_2(pseudo_outputs, y)
-                dloss = domain_linkage_func(mapped_ebd, g, torch.ones(bs).to(self.device))
+                # dloss = domain_linkage_func(mapped_ebd, g, torch.ones(bs).to(self.device))
+                dloss = domain_linkage_func(mapped_ebd, g)
                 # dloss.backward()
                 # optimizer_projection.step()
                 # print(f'5: {time.time() - start_time}')
