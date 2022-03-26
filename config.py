@@ -19,6 +19,7 @@ backbone_path='logs/checkpoints/Rn_101_equal_ds_best.pt'
 log_dir_run='logs/runs/'
 log_dir_data='logs/data/'
 
+buffer_size=1000
 # image parameters
 image_size = 224
 chanel_mean = [0.485, 0.456, 0.406]

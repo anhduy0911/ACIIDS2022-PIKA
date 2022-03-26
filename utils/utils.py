@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+import random
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -117,12 +118,79 @@ def JS_loss_fast_compute(target, input):
     loss = torch.sum(losses_tar_inp) + torch.sum(losses_inp_tar)
     
     return loss
-        
-if __name__ == '__main__':
-    a = torch.randn((5, 10), requires_grad=True)
-    b = torch.randn((5, 10), requires_grad=True)
+
+class MemoryBuffer:
+    def __init__(self, n_class, max_size=50, device='cuda'):
+        self.n_class = n_class
+        self.max_size = max_size
+        self.device = device
+
+        self.x = {}
+        self.g = {}
+            
+    def __get_random_idx(self, choices, exception=None):
+        if exception:
+            choices.remove(exception)
+        return random.choice(choices)
     
-    for i in range(200):
-        a = torch.randn((5, 10), requires_grad=True)
-        b = torch.randn((5, 10), requires_grad=True)
-        assert(JS_loss_fast_compute(a, b) > 0)
+    def add(self, x, g, label):
+        labs = label.cpu().tolist()
+        x = torch.clone(x.cpu().detach()).to(self.device)
+        g = torch.clone(x.cpu().detach()).to(self.device)
+        for i, labs_i in enumerate(labs):
+            if labs_i not in self.x:
+                self.x[labs_i] = []     
+            self.x[labs_i].append(x[i])
+            self.g[labs_i] = g[i]
+            
+            if len(self.x[labs_i]) > self.max_size:
+                self.x[labs_i].pop(0)
+    
+    def generate_fake_samples(self, label):
+        labs = label.cpu().tolist()
+        x = []
+        for labs_i in labs:
+            lab_false = self.__get_random_idx(list(self.x.keys()), labs_i)
+            idx_false = self.__get_random_idx(range(len(self.x[lab_false])))
+            
+            x.append(self.x[lab_false][idx_false])
+                        
+        return torch.stack(x).to(self.device)
+    
+    def generate_real_samples(self, batch_size):
+        y = random.choices(list(self.x.keys()), k=batch_size)
+        x = []
+        g = []
+        
+        for labs_i in y:
+            idx = self.__get_random_idx(range(len(self.x[labs_i])))
+            x.append(self.x[labs_i][idx])
+            g.append(self.g[labs_i])
+        
+        # x = torch.stack(x).to(self.device)
+        # print(x.shape)
+        # g = torch.stack(g).to(self.device)
+        # print(g.shape)
+        
+        return torch.stack(x).to(self.device), torch.stack(g).to(self.device), torch.tensor(y).to(self.device)
+
+if __name__ == '__main__':
+    # a = torch.randn((5, 10), requires_grad=True)
+    # b = torch.randn((5, 10), requires_grad=True)
+    
+    # for i in range(200):
+    #     a = torch.randn((5, 10), requires_grad=True)
+    #     b = torch.randn((5, 10), requires_grad=True)
+    #     assert(JS_loss_fast_compute(a, b) > 0)
+    buff = MemoryBuffer(76)
+    for i in range(60):
+        x = torch.randn((32, 64), requires_grad=True, device='cuda')
+        g = torch.randn((32, 64), requires_grad=True, device='cuda')
+        y = torch.randint(0, 76, (32,), device='cuda')
+        
+        buff.add(x, g, y)
+    
+    print(buff.x.keys())
+    x, g, y = buff.generate_real_samples(32)
+    buff.generate_fake_samples(y)
+    

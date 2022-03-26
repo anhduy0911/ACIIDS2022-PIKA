@@ -7,8 +7,9 @@ from data.pill_dataset_v2 import PillFolder, PillDataset
 # from data.pill_dataset import PillFolder
 import config as CFG
 from models.KGbased_model import KGBasedModel
+from models.modules import Critic
 from utils.metrics import MetricLogger
-from utils.utils import EarlyStopping, JS_loss_fast_compute
+from utils.utils import EarlyStopping, JS_loss_fast_compute, KL_loss_fast_compute, MemoryBuffer
 
 class KGPillRecognitionModel:
     def __init__(self, args):
@@ -29,8 +30,13 @@ class KGPillRecognitionModel:
         self.g_embedding = self.train_loader.g_embedding_np.to(self.device)
         # self.g_embedding = self.train_dataset.g_embedding_np.to(self.device)
         self.model = KGBasedModel(backbone_name=args.backbone)
+        
+        if self.args.loss == 'wd':
+            self.critic = Critic(CFG.g_embedding_features)
+            self.critic.to(self.device)
+            self.buffer = MemoryBuffer(CFG.n_class, CFG.buffer_size)
+            
         self.model.to(self.device)
-
         # print(self.model)
 
     def train(self):
@@ -41,8 +47,12 @@ class KGPillRecognitionModel:
         categorical_func_1 = torch.nn.CrossEntropyLoss()
         # categorical_func_2 = torch.nn.CrossEntropyLoss()
         # domain_linkage_func = torch.nn.CosineEmbeddingLoss()
-        domain_linkage_func = JS_loss_fast_compute
-
+        if self.args.loss == 'js':
+            domain_linkage_func = JS_loss_fast_compute
+        elif self.args.loss == 'kd':
+            domain_linkage_func = KL_loss_fast_compute
+        else:
+            critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=0.001)
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=0.001)
         # optimizer_projection = torch.optim.AdamW(self.model.projection.parameters(), lr=0.001)
         # start_time = time.time()
@@ -80,7 +90,16 @@ class KGPillRecognitionModel:
                 # optimizer.step()
                 # closs_2 = categorical_func_2(pseudo_outputs, y)
                 # dloss = domain_linkage_func(mapped_ebd, g, torch.ones(bs).to(self.device))
-                dloss = domain_linkage_func(mapped_ebd, g)
+                if self.args.loss == 'wd':
+                    self.buffer.add(mapped_ebd, g, y)
+                    loss_real = self.critic(mapped_ebd, g)
+                    fake_samples = self.buffer.generate_fake_samples(y)
+                    loss_fake = self.critic(fake_samples, g)
+                    
+                    dloss = - torch.abs(torch.mean(loss_real - loss_fake))
+                else:
+                    dloss = domain_linkage_func(mapped_ebd, g)
+                
                 # dloss.backward()
                 # optimizer_projection.step()
                 # print(f'5: {time.time() - start_time}')
@@ -93,6 +112,18 @@ class KGPillRecognitionModel:
                 running_loss += total_loss.item() * x.size(0)
                 running_corrects += torch.sum(y_pred == y)
 
+            for i in range(5):
+                critic_optimizer.zero_grad()
+                real_samples, g, y = self.buffer.generate_real_samples(self.args.batch_size)
+                loss_real = self.critic(real_samples, g)
+                fake_samples = self.buffer.generate_fake_samples(y)
+                loss_fake = self.critic(fake_samples, g)
+                
+                loss_critic = - torch.abs(torch.mean(loss_real - loss_fake))
+                loss_critic.backward()
+                critic_optimizer.step()
+                # print('CHECKPOINT')
+            
             self.model.eval()
             sample_eval_len = 0
             runn_acc_val = 0

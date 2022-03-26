@@ -18,7 +18,7 @@ def seed_everything(seed: int):
     torch.backends.cudnn.benchmark = True
 
 def main(args):
-    # model = BaseModel(args)
+    model = BaseModel(args)
     # model = BaseModelHandCraft(args)
     # model = KGPillRecognitionModel(args)
     model = KGPillRecognitionModel_assisted(args)
@@ -53,6 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--patience', type=int, default=20, metavar='N',
                         help='patience of early stopping')
     parser.add_argument('--backbone', type=str, default="resnet50", metavar='N', help='choose backbone model')
+    parser.add_argument('--loss', type=str, default="kl", metavar='N', help='choose loss for projection module')
 
     args = parser.parse_args()
     print(args)

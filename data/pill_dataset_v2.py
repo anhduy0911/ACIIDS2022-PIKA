@@ -117,6 +117,7 @@ class PillDataset(Dataset):
 if __name__ == '__main__':
     # print(CFG)
     pill_dts = PillDataset(CFG.train_folder_v2, 32, CFG.g_embedding_condensed, mode='train')
+    pill_dts = PillDataset(CFG.train_folder_v2, 32, CFG.g_embedding_condensed, mode='train')
 
     cnt = 0
     print(len(pill_dts))
