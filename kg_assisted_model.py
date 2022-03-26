@@ -25,7 +25,7 @@ class KGPillRecognitionModel:
 
         # self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_fewshot), PillFolder(CFG.test_folder_new, mode='test')
         # self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
-        self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
+        self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, args.g_emd_path, 'train', exclude_path=args.exclude_path), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test', exclude_path=args.exclude_path)
 
         self.g_embedding = self.train_loader.g_embedding_np.to(self.device)
         # self.g_embedding = self.train_dataset.g_embedding_np.to(self.device)
@@ -49,7 +49,7 @@ class KGPillRecognitionModel:
         # domain_linkage_func = torch.nn.CosineEmbeddingLoss()
         if self.args.loss == 'js':
             domain_linkage_func = JS_loss_fast_compute
-        elif self.args.loss == 'kd':
+        elif self.args.loss == 'kl':
             domain_linkage_func = KL_loss_fast_compute
         else:
             critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=0.001)
@@ -112,16 +112,17 @@ class KGPillRecognitionModel:
                 running_loss += total_loss.item() * x.size(0)
                 running_corrects += torch.sum(y_pred == y)
 
-            for i in range(5):
-                critic_optimizer.zero_grad()
-                real_samples, g, y = self.buffer.generate_real_samples(self.args.batch_size)
-                loss_real = self.critic(real_samples, g)
-                fake_samples = self.buffer.generate_fake_samples(y)
-                loss_fake = self.critic(fake_samples, g)
-                
-                loss_critic = - torch.abs(torch.mean(loss_real - loss_fake))
-                loss_critic.backward()
-                critic_optimizer.step()
+            if self.args.loss == 'wd':
+                for i in range(5):
+                    critic_optimizer.zero_grad()
+                    real_samples, g, y = self.buffer.generate_real_samples(self.args.batch_size)
+                    loss_real = self.critic(real_samples, g)
+                    fake_samples = self.buffer.generate_fake_samples(y)
+                    loss_fake = self.critic(fake_samples, g)
+                    
+                    loss_critic = - torch.abs(torch.mean(loss_real - loss_fake))
+                    loss_critic.backward()
+                    critic_optimizer.step()
                 # print('CHECKPOINT')
             
             self.model.eval()

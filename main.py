@@ -18,7 +18,7 @@ def seed_everything(seed: int):
     torch.backends.cudnn.benchmark = True
 
 def main(args):
-    model = BaseModel(args)
+    # model = BaseModel(args)
     # model = BaseModelHandCraft(args)
     # model = KGPillRecognitionModel(args)
     model = KGPillRecognitionModel_assisted(args)
@@ -54,6 +54,8 @@ if __name__ == '__main__':
                         help='patience of early stopping')
     parser.add_argument('--backbone', type=str, default="resnet50", metavar='N', help='choose backbone model')
     parser.add_argument('--loss', type=str, default="kl", metavar='N', help='choose loss for projection module')
+    parser.add_argument('--g_emd_path', type=str, default="./data/converted_graph/condened_g_embedding_deepwalk_w.json", metavar='N')
+    parser.add_argument('--exclude_path', type=str, default="", metavar='N')
 
     args = parser.parse_args()
     print(args)

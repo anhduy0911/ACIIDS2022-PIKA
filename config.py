@@ -15,7 +15,7 @@ n_class = 76
 num_workers = 0
 eval_steps = 5
 early_stop = 20
-backbone_path='logs/checkpoints/Rn_101_equal_ds_best.pt'
+backbone_path='logs/checkpoints/Rn_50_equal_dts_best.pt'
 log_dir_run='logs/runs/'
 log_dir_data='logs/data/'
 

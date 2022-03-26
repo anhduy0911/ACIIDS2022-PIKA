@@ -171,10 +171,31 @@ def build_label_embedding():
     print(word_ebd.shape)
     np.save('data/converted_graph/pill_word_ebd.npy', word_ebd)
     
-
+def generate_exclude_list(n_class=CFG.n_class):
+    import random
+    import pickle
+    n_25 = n_class // 4
+    q_25 = random.sample(range(n_class), n_25)
+    print(q_25)
+    with open('./data/converted_graph/graph_exp2/exclude_25.pkl', 'wb') as f:
+        pickle.dump(q_25, f)
+    
+    n_50 = n_class // 2
+    q_50 = random.sample(range(n_class), n_50)
+    print(q_50)
+    with open('./data/converted_graph/graph_exp2/exclude_50.pkl', 'wb') as f:
+        pickle.dump(q_50, f)
+        
+    n_75 = n_class * 3 // 4
+    q_75 = random.sample(range(n_class), n_75)
+    print(q_75)
+    with open('./data/converted_graph/graph_exp2/exclude_75.pkl', 'wb') as f:
+        pickle.dump(q_75, f)
+        
 if __name__ == '__main__':
     # build_data()
     import matplotlib.pyplot as plt
-    visualize_graph()
+    # visualize_graph()
+    generate_exclude_list()
     # build_label_embedding()
     # build_adj_matrix()

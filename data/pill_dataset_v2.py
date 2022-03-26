@@ -8,7 +8,7 @@ import config as CFG
 import numpy as np
 import cv2 as cv
 import os
-
+import pickle
 
 class PillFolder(ImageFolder):
     def __init__(self, root, g_ebedding, class_to_idx, transform=None):
@@ -39,7 +39,7 @@ class PillFolder(ImageFolder):
         return sample, target, self.g_ebd[target]
 
 class PillDataset(Dataset):
-    def __init__(self, root_folder, batch_size=32, g_ebedding_path=CFG.g_embedding_condensed, mode='train') -> None:
+    def __init__(self, root_folder, batch_size=32, g_ebedding_path=CFG.g_embedding_condensed, mode='train', exclude_path='') -> None:
         self.root_folder = root_folder
         self.mode = mode
         self.batch_size = batch_size
@@ -47,7 +47,14 @@ class PillDataset(Dataset):
         self.transform = self.__get_transforms()
         self.prescriptions_folder = [d.name for d in os.scandir(self.root_folder) if d.is_dir()]
         self.g_embedding, self.g_embedding_np = self.__get_g_embedding(g_ebedding_path)
-
+        self.collate_fn = None
+        
+        if exclude_path != '':
+            with open(exclude_path, 'rb') as f:
+                self.exclude_list = pickle.load(f)
+            print(self.exclude_list)
+            self.collate_fn = CustomCollator(self.exclude_list)
+            # print(self.collate_fn)
 
     def __len__(self):
         return len(self.prescriptions_folder)
@@ -57,8 +64,10 @@ class PillDataset(Dataset):
         # start = time.time()
         # print('Get item...')
         pill_folder = PillFolder(self.root_folder + self.prescriptions_folder[index], self.g_embedding_np, self.class_to_idx, self.transform)
-        pill_dts = DataLoader(pill_folder, batch_size=self.batch_size, shuffle=True, num_workers=CFG.num_workers)
-        
+        if self.collate_fn is not None:
+            pill_dts = DataLoader(pill_folder, batch_size=self.batch_size, shuffle=True, num_workers=CFG.num_workers, collate_fn=self.collate_fn)
+        else:
+            pill_dts = DataLoader(pill_folder, batch_size=self.batch_size, shuffle=True, num_workers=CFG.num_workers)
         # print(time.time() - start)
         # start = time.time()
         # indexes = random.sample(range(len(pill_folder)), self.batch_size)
@@ -78,13 +87,15 @@ class PillDataset(Dataset):
         # labels = torch.cat(labels, dim=0)
 
         imgs, labels, g_ebd = next(iter(pill_dts))
-        
+        if imgs is not None:
+            return imgs, labels, g_ebd
+        else:
+            return self.__getitem__(index - 1)
         # print(time.time() - start)
         # start = time.time()
         # print(imgs.shape)
         # print(labels)
 
-        return imgs, labels, g_ebd
 
     def __get_g_embedding(self, g_embedding_path):
         g_embedding = json.load(open(g_embedding_path, 'r'))
@@ -113,12 +124,34 @@ class PillDataset(Dataset):
                                         transforms.Normalize(mean=CFG.chanel_mean, std=CFG.chanel_std)])
         return transform
 
+class CustomCollator(object):
+    def __init__(self, exclude_list):
+        self.exclude_list = exclude_list
+        
+    def __call__(self, batch):
+        xs, ys, gs = [], [], []
+        
+        for _x, _y, _g in batch:
+            if _y in self.exclude_list:
+                continue
+            else:
+                xs.append(_x)
+                ys.append(_y)
+                gs.append(_g)
+        
+        if len(xs) > 0:
+            xs = torch.stack(xs)
+            ys = torch.tensor(ys)
+            gs = torch.stack(gs)
+        
+            return xs, ys, gs
+        else:
+            return None, None, None
 
 if __name__ == '__main__':
     # print(CFG)
-    pill_dts = PillDataset(CFG.train_folder_v2, 32, CFG.g_embedding_condensed, mode='train')
-    pill_dts = PillDataset(CFG.train_folder_v2, 32, CFG.g_embedding_condensed, mode='train')
-
+    pill_dts = PillDataset(CFG.train_folder_v2, 32, CFG.g_embedding_condensed, mode='train', exclude_path='./data/converted_graph/graph_exp2/exclude_75.pkl')
+    
     cnt = 0
     print(len(pill_dts))
 

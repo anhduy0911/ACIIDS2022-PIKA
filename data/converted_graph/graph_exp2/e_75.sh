@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=1 python main.py --name KG_assisted_rn50_js_e75 --backbone resnet50 --val-batch-size 32 --batch-size 64 --loss js --g_emd_path ./data/converted_graph/graph_exp1/name_pill_weighted_26_03_quantile_25.json --exclude_path ./data/converted_graph/graph_exp2/exclude_75.pkl
