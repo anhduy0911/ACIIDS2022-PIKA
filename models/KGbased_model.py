@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from models.modules import ImageEncoder
 import config as CFG
+from models.modules import Attention
 
 class KGBasedModel(nn.Module):
     def __init__(self, hidden_size=CFG.g_embedding_features, num_class=CFG.n_class, backbone_name=CFG.image_model_name):
@@ -18,6 +19,7 @@ class KGBasedModel(nn.Module):
             nn.ReLU(),
         ) 
 
+        self.attention = Attention(hidden_size, method='concat')
         self.attention_dense = nn.Linear(hidden_size + hidden_visual_features, hidden_size)
         self.classifier = nn.Linear(hidden_size, num_class)
 
@@ -35,9 +37,9 @@ class KGBasedModel(nn.Module):
         mapped_visual_embedding = self.projection(visual_embedding)
         # print(mapped_visual_embedding.shape)
         condensed_graph_embedding = torch.mm(pseudo_classifier_output, g_embedding)
-        # print(condensed_graph_embedding.shape)
         # context attention module
-        scores = torch.mm(mapped_visual_embedding, condensed_graph_embedding.t())
+        # scores = torch.mm(mapped_visual_embedding, condensed_graph_embedding.t())
+        scores = self.attention(mapped_visual_embedding, condensed_graph_embedding)
         # print(scores.shape)
         distribution = nn.Softmax(dim=-1)(scores)
         # print(distribution.shape)

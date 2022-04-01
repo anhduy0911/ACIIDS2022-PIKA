@@ -10,6 +10,8 @@ test_folder_v2 = "data/pills/test_v2/"
 g_embedding_path = "data/converted_graph/mapped_pills.dat"
 g_embedding_condensed = "data/converted_graph/condened_g_embedding_deepwalk_w.json"
 map_class_to_idx = 'data/converted_graph/mapdict.json'
+list_test = 'data/converted_graph/graph_exp2/test_list.pkl'
+
 g_embedding_features = 64
 n_class = 76
 num_workers = 0

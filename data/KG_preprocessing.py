@@ -1,11 +1,12 @@
+import pickle
 import networkx as nx
 # from torch_geometric.data import Dataset
 # from torch_geometric.utils.convert import from_networkx
 import json
 import math
+import pandas as pd
 
-
-def build_KG_graph(json_file):
+def build_KG_graph(json_file, exclude_path='', name='pill_data'):
     coocurence = {}
     pill_occurence = {}
     diag_occurence = {}
@@ -35,6 +36,14 @@ def build_KG_graph(json_file):
         return tf * idf
 
     weighted_edges = {}
+    mapped_name = pd.read_csv('./data/converted_graph/mapped_name.csv', sep=',', header=0, index_col=0)
+    mapped_name.index = mapped_name.index.map(str)
+    
+    if exclude_path != '':
+        exclude_ids = pickle.load(open(exclude_path, 'rb'))
+        name2idx = json.load(open('./data/converted_graph/mapdict.json', 'r'))
+        exclude_names = [list(name2idx.keys())[list(name2idx.values()).index(i)] for i in exclude_ids]
+    
     for pill in pill_occurence.keys():
         for diag in coocurence[pill].keys():
             # print(f'pill: {pill} diag: {diag}')
@@ -43,13 +52,21 @@ def build_KG_graph(json_file):
             weighted_edges[pill][diag] = tf_idf(pill, diag)
 
     # print(weighted_edges)
-    with open('data/prescriptions/pill_data.dat', 'w') as f:
+    with open('data/prescriptions/' + name + '.dat', 'w') as f:
         for pill in weighted_edges.keys():
+            try:
+                mapped_pill = mapped_name.loc[pill, 'mapped_pill']
+            except KeyError:
+                mapped_pill = pill
             for diag, weight in weighted_edges[pill].items():
                 # print('im here')
-                f.write(pill + '\\' + diag + '\\' + str(weight) + '\n')
-
-
+                if mapped_pill in exclude_names:
+                    print(f'Excluding {mapped_pill}')
+                    continue
+                print(f'pill: {pill}, mapped_pill: {mapped_pill}')
+                f.write(mapped_pill + '\\' + diag + '\\' + str(weight) + '\n')
+               
+                    
 def prepare_prescription_dataset(json_file, graph_path='./data/converted_graph/vectors_u.dat'):
     import os
 
@@ -158,7 +175,7 @@ def condensed_result_file():
         json.dump(condensed_data, f, ensure_ascii=False)
 
 if __name__ == '__main__':
-    build_KG_graph('data/prescriptions/condensed_data.json')
+    build_KG_graph('data/prescriptions/condensed_data.json', exclude_path='data/converted_graph/graph_exp2/exclude_75.pkl', name='pill_data_e75')
     # prepare_prescription_dataset('data/prescriptions/condensed_data.json')
     # condensed_result_file()
     # test()

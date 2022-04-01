@@ -182,4 +182,33 @@ class Critic(nn.Module):
         
         return nn.Sigmoid()(self.layer3(inp))
     
+class Attention(nn.Module):
+    def __init__(self, hidden_size, method="dot"):
+        '''
+        Module return the alignment scores
+        '''
+        super(Attention, self).__init__()
+        self.method = method
+        self.hidden_size = hidden_size
         
+        # Defining the layers/weights required depending on alignment scoring method
+        if method == "general":
+            self.fc = nn.Linear(hidden_size, hidden_size, bias=False)
+        elif method == "concat":
+            self.fc = nn.Linear(hidden_size, hidden_size, bias=False)
+            self.weight = nn.Linear(hidden_size, 1, bias=False)
+  
+    def forward(self, decoder_hidden, encoder_outputs):
+        if self.method == "dot":
+            # For the dot scoring method, no weights or linear layers are involved
+            return encoder_outputs.bmm(decoder_hidden.view(1,-1,1)).squeeze(-1)
+        elif self.method == "general":
+            # For general scoring, decoder hidden state is passed through linear layers to introduce a weight matrix
+            out = self.fc(decoder_hidden)
+            return encoder_outputs.bmm(out.view(1,-1,1)).squeeze(-1)
+        elif self.method == "concat":
+            # For concat scoring, decoder hidden state and encoder outputs are concatenated first
+            out = decoder_hidden + encoder_outputs.unsqueeze(1)
+            out = torch.tanh(self.fc(out))
+            
+            return self.weight(out).squeeze(-1)

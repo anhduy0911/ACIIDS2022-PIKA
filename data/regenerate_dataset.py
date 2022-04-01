@@ -139,17 +139,17 @@ def test_dataset(g_embedding_path):
     json.dump(condensed_g_embedding, open('data/converted_graph/condened_g_embedding_deepwalk_w.json', 'w'))
 
 def generate_mapped_pill_embedding(g_embedding_name):
-    base_path = './data/converted_graph/graph_exp1/'
-    mapped_name = pd.read_csv('./data/converted_graph/mapped_name.csv', sep=',', header=0, index_col=0)
-    mapped_name.index = mapped_name.index.map(str)
+    base_path = './data/converted_graph/graph_exp2/'
+    # mapped_name = pd.read_csv('./data/converted_graph/mapped_name.csv', sep=',', header=0, index_col=0)
+    # mapped_name.index = mapped_name.index.map(str)
     # print(mapped_name.index)
     mapped_ebd = {}
     with open(base_path + g_embedding_name + '.dat') as f:
         lines = f.readlines()
         for line in lines:
             pill_name, ebd = line.strip().split('@')
-            mapped_n = mapped_name.loc[pill_name, 'mapped_pill']
-            mapped_ebd[mapped_n] = [float(x) for x in ebd.split(' ')]
+            # mapped_n = mapped_name.loc[pill_name, 'mapped_pill']
+            mapped_ebd[pill_name] = [float(x) for x in ebd.split(' ')]
     #         g_embedding[pill_name] = ebd
     #         mapped_pills_dict[pill_name] = ""
     # return g_embedding
@@ -200,4 +200,4 @@ def generate_new_dataset_v2():
 if __name__ == "__main__":
     # test_dataset('./data/converted_graph/mapped_pills_deepwalk_w.dat')
     # generate_new_dataset_v2()
-    generate_mapped_pill_embedding('name_pill_weighted_26_03_quantile_75')
+    generate_mapped_pill_embedding('name_pill_weighted_e75')

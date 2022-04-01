@@ -9,7 +9,7 @@ import config as CFG
 from models.KGbased_model import KGBasedModel
 from models.modules import Critic
 from utils.metrics import MetricLogger
-from utils.utils import EarlyStopping, JS_loss_fast_compute, KL_loss_fast_compute, MemoryBuffer
+from utils.utils import *
 
 class KGPillRecognitionModel:
     def __init__(self, args):

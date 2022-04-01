@@ -174,20 +174,31 @@ def build_label_embedding():
 def generate_exclude_list(n_class=CFG.n_class):
     import random
     import pickle
+    
+    ls_num = set(range(n_class))
+    # preserve 25 class for test
+    test_list = set(random.sample(ls_num, 25)) 
+    
+    n_class = n_class - len(test_list)
     n_25 = n_class // 4
-    q_25 = random.sample(range(n_class), n_25)
+    ls_num = ls_num - test_list
+    print(test_list)
+    with open('./data/converted_graph/graph_exp2/test_list.pkl', 'wb') as f:
+        pickle.dump(test_list, f)
+        
+    q_25 = set(random.sample(ls_num, n_25))
     print(q_25)
     with open('./data/converted_graph/graph_exp2/exclude_25.pkl', 'wb') as f:
         pickle.dump(q_25, f)
     
-    n_50 = n_class // 2
-    q_50 = random.sample(range(n_class), n_50)
+    n_50 = n_class // 2 - n_25
+    q_50 = set(random.sample(ls_num - q_25, n_50)).union(q_25)
     print(q_50)
     with open('./data/converted_graph/graph_exp2/exclude_50.pkl', 'wb') as f:
         pickle.dump(q_50, f)
         
-    n_75 = n_class * 3 // 4
-    q_75 = random.sample(range(n_class), n_75)
+    n_75 = n_class * 3 // 4 - n_25 - n_50
+    q_75 = set(random.sample(ls_num - q_50, n_75)).union(q_50)
     print(q_75)
     with open('./data/converted_graph/graph_exp2/exclude_75.pkl', 'wb') as f:
         pickle.dump(q_75, f)

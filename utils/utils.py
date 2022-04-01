@@ -68,21 +68,21 @@ def KL_approximation_loss(target, input):
     
     return loss
 
-def KL_loss_fast_compute(target, input):
+def KL_loss_fast_compute(target, input, eps=1e-6):
     '''
     Custom Approximation of KL given N samples of target dist and input dist
     target - N, C
     input - N, C
     '''
     dot_inp = torch.matmul(input, input.t())
-    norm_inp = torch.norm(input, dim=1)
+    norm_inp = torch.norm(input, dim=1) + eps
     norm_mtx_inp = torch.matmul(norm_inp.unsqueeze(1), norm_inp.unsqueeze(0))
     cosine_inp = dot_inp / norm_mtx_inp
     cosine_inp = 1/2 * (cosine_inp + 1)
     cosine_inp = cosine_inp / torch.sum(cosine_inp, dim=1)
     
     dot_tar = torch.matmul(target, target.t())
-    norm_tar = torch.norm(target, dim=1)
+    norm_tar = torch.norm(target, dim=1) + eps
     norm_mtx_tar = torch.matmul(norm_tar.unsqueeze(1), norm_tar.unsqueeze(0))
     cosine_tar = dot_tar / norm_mtx_tar
     cosine_tar = 1/2 * (cosine_tar + 1)
@@ -93,21 +93,21 @@ def KL_loss_fast_compute(target, input):
     
     return loss
 
-def JS_loss_fast_compute(target, input):
+def JS_loss_fast_compute(target, input, eps=1e-6):
     '''
     Custom Approximation of KL given N samples of target dist and input dist
     target - N, C
     input - N, C
     '''
     dot_inp = torch.matmul(input, input.t())
-    norm_inp = torch.norm(input, dim=1)
+    norm_inp = torch.norm(input, dim=1) + eps
     norm_mtx_inp = torch.matmul(norm_inp.unsqueeze(1), norm_inp.unsqueeze(0))
     cosine_inp = dot_inp / norm_mtx_inp
     cosine_inp = 1/2 * (cosine_inp + 1)
     cosine_inp = cosine_inp / torch.sum(cosine_inp, dim=1)
     
     dot_tar = torch.matmul(target, target.t())
-    norm_tar = torch.norm(target, dim=1)
+    norm_tar = torch.norm(target, dim=1) + eps
     norm_mtx_tar = torch.matmul(norm_tar.unsqueeze(1), norm_tar.unsqueeze(0))
     cosine_tar = dot_tar / norm_mtx_tar
     cosine_tar = 1/2 * (cosine_tar + 1)
@@ -118,6 +118,49 @@ def JS_loss_fast_compute(target, input):
     loss = torch.sum(losses_tar_inp) + torch.sum(losses_inp_tar)
     
     return loss
+
+def KL_divergence(teacher_batch_input, student_batch_input):
+    """
+    Compute the KL divergence of 2 batches of layers
+    Args:
+        teacher_batch_input: Size N x d
+        student_batch_input: Size N x c
+    
+    Method: Kernel Density Estimation (KDE)
+    Kernel: Gaussian
+    """
+    batch_student, _ = student_batch_input.shape
+    batch_teacher, _ = teacher_batch_input.shape
+    
+    assert batch_teacher == batch_student, "Unmatched batch size"
+    
+    teacher_batch_input = teacher_batch_input.unsqueeze(1)
+    student_batch_input = student_batch_input.unsqueeze(1)
+    
+    # print(teacher_batch_input.shape)
+    # print(student_batch_input.shape)
+    sub_s = student_batch_input - student_batch_input.transpose(0,1)
+    sub_s_norm = torch.norm(sub_s, dim=2)
+    sub_s_norm = sub_s_norm.view(batch_student,-1)
+    std_s = torch.std(sub_s_norm)
+    mean_s = torch.mean(sub_s_norm)
+    kernel_mtx_s = torch.pow(sub_s_norm - mean_s, 2) / (torch.pow(std_s, 2) + 0.001)
+    kernel_mtx_s = torch.exp(-1/2 * kernel_mtx_s)
+    kernel_mtx_s = kernel_mtx_s/torch.sum(kernel_mtx_s, dim=1, keepdim=True)
+    
+    sub_t = teacher_batch_input - teacher_batch_input.transpose(0,1)
+    sub_t_norm = torch.norm(sub_t, dim=2)
+    sub_t_norm = sub_t_norm.view(batch_teacher,-1)
+    std_t = torch.std(sub_t_norm)
+    mean_t = torch.mean(sub_t_norm)
+    kernel_mtx_t = torch.pow(sub_t_norm - mean_t, 2) / (torch.pow(std_t, 2) + 0.001)
+    kernel_mtx_t = torch.exp(-1/2 * kernel_mtx_t)
+    kernel_mtx_t = kernel_mtx_t/torch.sum(kernel_mtx_t, dim=1, keepdim=True)
+    
+    # print(kernel_mtx_s.shape)
+    # print(kernel_mtx_t.shape)
+    kl = torch.sum(kernel_mtx_t * torch.log(kernel_mtx_t/kernel_mtx_s))
+    return kl
 
 class MemoryBuffer:
     def __init__(self, n_class, max_size=50, device='cuda'):
@@ -175,22 +218,22 @@ class MemoryBuffer:
         return torch.stack(x).to(self.device), torch.stack(g).to(self.device), torch.tensor(y).to(self.device)
 
 if __name__ == '__main__':
-    # a = torch.randn((5, 10), requires_grad=True)
-    # b = torch.randn((5, 10), requires_grad=True)
+    a = torch.randn((12, 64), requires_grad=True)
+    b = torch.randn((12, 64), requires_grad=True)
     
-    # for i in range(200):
-    #     a = torch.randn((5, 10), requires_grad=True)
-    #     b = torch.randn((5, 10), requires_grad=True)
-    #     assert(JS_loss_fast_compute(a, b) > 0)
-    buff = MemoryBuffer(76)
-    for i in range(60):
-        x = torch.randn((32, 64), requires_grad=True, device='cuda')
-        g = torch.randn((32, 64), requires_grad=True, device='cuda')
-        y = torch.randint(0, 76, (32,), device='cuda')
+    for i in range(200):
+        a = torch.randn((12, 64), requires_grad=True)
+        b = torch.randn((12, 64), requires_grad=True)
+        assert(KL_divergence(a, b) > 0)
+    # buff = MemoryBuffer(76)
+    # for i in range(60):
+    #     x = torch.randn((32, 64), requires_grad=True, device='cuda')
+    #     g = torch.randn((32, 64), requires_grad=True, device='cuda')
+    #     y = torch.randint(0, 76, (32,), device='cuda')
         
-        buff.add(x, g, y)
+    #     buff.add(x, g, y)
     
-    print(buff.x.keys())
-    x, g, y = buff.generate_real_samples(32)
-    buff.generate_fake_samples(y)
+    # print(buff.x.keys())
+    # x, g, y = buff.generate_real_samples(32)
+    # buff.generate_fake_samples(y)
     
