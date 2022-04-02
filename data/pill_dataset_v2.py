@@ -53,6 +53,7 @@ class PillDataset(Dataset):
         # self.img_dicts = {}
         
         if exclude_path != '':
+            print('DATA EXCLUDE')
             with open(exclude_path, 'rb') as f:
                 self.exclude_list = pickle.load(f)
             print(self.exclude_list)
