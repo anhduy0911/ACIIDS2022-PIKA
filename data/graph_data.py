@@ -16,6 +16,9 @@ def convert_2_homogeneous_graph():
 
 def build_data():
     mapped_pill_idx = json.load(open('data/converted_graph/mapdict.json', 'r'))
+    baseline_weights = torch.load(CFG.backbone_path)
+    classifier_w = baseline_weights['classifier.weight']
+    # print(classifier_w.shape)
     xs = mapped_pill_idx.keys()
     edge_index = []
     edge_weight = []
@@ -38,8 +41,8 @@ def build_data():
         edge_weight.append(w)
     
     # print(mapped_pill_idx.values())
-    # data = Data(x=xs, edge_index=torch.tensor(edge_index).t().contiguous(), edge_attr=torch.tensor(edge_weight))
-    data = Data(x=torch.tensor(list(mapped_pill_idx.values()), dtype=torch.float32).unsqueeze(1), edge_index=torch.tensor(edge_index).t().contiguous(), edge_attr=torch.tensor(edge_weight).unsqueeze(1))
+    # data = Data(x=xs, edge_i``ndex=torch.tensor(edge_index).t().contiguous(), edge_attr=torch.tensor(edge_weight))
+    data = Data(x=torch.eye(CFG.n_class, dtype=torch.float32), edge_index=torch.tensor(edge_index).t().contiguous(), edge_attr=torch.tensor(edge_weight).unsqueeze(1))
     # print(data)
     return data
 
@@ -207,6 +210,7 @@ if __name__ == '__main__':
     # build_data()
     import matplotlib.pyplot as plt
     # visualize_graph()
-    generate_exclude_list()
+    # generate_exclude_list()
     # build_label_embedding()
     # build_adj_matrix()
+    build_data()

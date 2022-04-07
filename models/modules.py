@@ -94,16 +94,16 @@ class ImageEncoderHancraft(nn.Module):
 class GCN(nn.Module):
     def __init__(self, n_class=CFG.n_class) -> None:
         super(GCN, self).__init__()
-        self.conv1 = pyg_nn.GCNConv(1, 16)
+        self.conv1 = pyg_nn.GCNConv(CFG.n_class, 32)
         self.relu = nn.ReLU()
-        self.conv2 = pyg_nn.GCNConv(16, n_class)
+        self.conv2 = pyg_nn.GCNConv(32, n_class)
     
     def forward(self, data):
         x, edge_idx, edge_w = data.x, data.edge_index, data.edge_attr
         x = self.conv1(x, edge_idx, edge_w)
         x = self.relu(x)
         x = self.conv2(x, edge_idx, edge_w)
-    
+        
         return x
 
 def l2normalize(v, eps=1e-12):

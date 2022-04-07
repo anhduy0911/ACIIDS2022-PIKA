@@ -50,7 +50,7 @@ class KGPillRecognitionModel:
         if self.args.loss == 'js':
             domain_linkage_func = JS_loss_fast_compute
         elif self.args.loss == 'kl':
-            domain_linkage_func = KL_loss_fast_compute
+            domain_linkage_func = KL_divergence
         else:
             critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=0.001)
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=0.001)
