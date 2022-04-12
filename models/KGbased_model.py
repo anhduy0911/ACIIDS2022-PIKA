@@ -20,8 +20,8 @@ class KGBasedModel(nn.Module):
         ) 
 
         self.attention = Attention(hidden_size, method='concat')
-        self.attention_dense = nn.Linear(hidden_size + hidden_visual_features, hidden_size)
-        self.classifier = nn.Linear(hidden_size, num_class)
+        self.attention_dense = nn.Linear(hidden_size * 2, hidden_size)
+        self.classifier = nn.Linear(hidden_size + hidden_visual_features, num_class)
 
     def setup_backborn_model(self, name):
         model = ImageEncoder(model_name=name)
@@ -43,14 +43,14 @@ class KGBasedModel(nn.Module):
         # print(scores.shape)
         distribution = nn.Softmax(dim=-1)(scores)
         # print(distribution.shape)
-        context_val = torch.mm(distribution, mapped_visual_embedding)
+        context_val = torch.mm(distribution, condensed_graph_embedding)
         # print(context_val.shape)
-        context_and_visual_vec = torch.cat([context_val, visual_embedding], dim=-1)
+        context_and_visual_vec = torch.cat([context_val, mapped_visual_embedding], dim=-1)
         # print(context_and_visual_vec.shape)
         attention_vec = nn.Tanh()(self.attention_dense(context_and_visual_vec))
         # print(attention_vec.shape)
-
-        output = self.classifier(attention_vec)
+        enhanced_vec = torch.cat([attention_vec, visual_embedding], dim=-1)
+        output = self.classifier(enhanced_vec)
         return pseudo_classifier_output, mapped_visual_embedding, output
 
 

@@ -23,7 +23,11 @@ class ImageEncoder(nn.Module):
             self.img_num_classes = image_num_classes
             self.classifier = nn.Linear(self.visual_features, image_num_classes)
         else:
-            if model_name == "resnet50":
+            if model_name == "resnet18":
+                self.model = models.resnet18(pretrained=pretrained)
+            elif model_name == "resnet34":
+                self.model = models.resnet34(pretrained=pretrained)
+            elif model_name == "resnet50":
                 self.model = models.resnet50(pretrained=pretrained)
             elif model_name == 'resnet101':
                 self.model = models.resnet101(pretrained=pretrained)

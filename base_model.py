@@ -26,10 +26,28 @@ class BaseModel:
         self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
         self.es = EarlyStopping(patience=args.patience)
 
-        self.model = ImageEncoder(model_name=args.backbone)
+        if args.warmstart_backbone:
+            self.model = ImageEncoder(model_name=args.backbone)
+        else:
+            self.model = self.warm_start_model(args.backbone)
+        
         self.model.to(self.device)
         print(self.model)
 
+    def warm_start_model(self, name):
+        model = ImageEncoder(model_name=name)
+        model.load_state_dict(torch.load(CFG.backbone_path))
+        
+        for param in model.parameters():
+            param.requires_grad = False
+        
+        model.classifier.weight.fill_(1)
+        model.classifier.bias.fill_(0)
+        for param in model.classifier.parameters():
+            param.requires_grad = True
+        
+        return model
+    
     def train(self):
         """
         Train the model

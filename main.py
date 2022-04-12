@@ -18,12 +18,15 @@ def seed_everything(seed: int):
     torch.backends.cudnn.benchmark = True
 
 def main(args):
-    # model = BaseModel(args)
+    model = BaseModel(args)
     # model = BaseModelHandCraft(args)
     # model = KGPillRecognitionModel(args)
-    model = KGPillRecognitionModel_assisted(args)
-    model.train()
-    # model.evaluate()
+    # model = KGPillRecognitionModel_assisted(args)
+    if args.mode == 'train':
+        model.train()
+        # model.evaluate()
+    else:
+        model.evaluate()
     # model.save_cpu(best=True)
 
 if __name__ == '__main__':
@@ -56,7 +59,10 @@ if __name__ == '__main__':
     parser.add_argument('--loss', type=str, default="kl", metavar='N', help='choose loss for projection module')
     parser.add_argument('--g_emd_path', type=str, default="./data/converted_graph/condened_g_embedding_deepwalk_w.json", metavar='N')
     parser.add_argument('--exclude_path', type=str, default="", metavar='N')
-
+    parser.add_argument('--warmstart_backbone', type=bool, default=False, metavar='N')
+    parser.add_argument('--mode', type=str, default="train", metavar='N')
+    
+    
     args = parser.parse_args()
     print(args)
     seed_everything(CFG.seed_number)
