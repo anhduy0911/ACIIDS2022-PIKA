@@ -26,7 +26,7 @@ class BaseModel:
         self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
         self.es = EarlyStopping(patience=args.patience)
 
-        if args.warmstart_backbone:
+        if not args.warmstart_backbone:
             self.model = ImageEncoder(model_name=args.backbone)
         else:
             self.model = self.warm_start_model(args.backbone)
@@ -35,6 +35,7 @@ class BaseModel:
         print(self.model)
 
     def warm_start_model(self, name):
+        print('LOADING WARMSTART...')
         model = ImageEncoder(model_name=name)
         model.load_state_dict(torch.load(CFG.backbone_path))
         
@@ -100,8 +101,8 @@ class BaseModel:
             epoch_loss = running_loss / sample_len
             epoch_acc = running_corrects.double() / sample_len
             logger.log_metrics(epoch_loss, val_acc=epoch_acc_val, step=epoch)
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                epoch, epoch_loss, epoch_acc))
+            print('{} Loss: {:.4f} Acc: {:.4f}, Val Acc: {:.4f}'.format(
+                epoch, epoch_loss, epoch_acc, epoch_acc_val))
 
             self.es(-epoch_acc_val)
             if self.es.early_stop:

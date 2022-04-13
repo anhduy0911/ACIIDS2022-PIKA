@@ -93,13 +93,18 @@ def visualize_graph():
     
     edge_weight = np.array(edge_weight)
     
-    fig = plt.figure(figsize =(10, 7))
+    
+    fig = plt.figure(figsize =(5, 1.5))
     # Creating axes instance
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.ylabel('Edge weight')
+    import seaborn as sns
+    sns.boxplot(data=edge_weight, orient='h', palette='pastel')
     # Creating plot
-    bp = ax.boxplot(edge_weight)
-    fig.savefig('logs/imgs/boxplot_edges.png') 
+    # bp = ax.boxplot(edge_weight, vert=False)
+    plt.xlabel('Edge weight')
+    plt.yticks([])
+    plt.margins(y=0.5)
+    plt.tight_layout(pad=0.2)
+    fig.savefig('logs/imgs/boxplot_edges.pdf', dpi=150) 
     
     # print(f'weight max: {np.max(edge_weight)}, min: {np.min(edge_weight)}, mean: {np.mean(edge_weight)}, std: {np.std(edge_weight)}')
     # # data = Data(x=xs, edge_index=torch.tensor(edge_index).t().contiguous(), edge_attr=torch.tensor(edge_weight))
@@ -209,8 +214,8 @@ def generate_exclude_list(n_class=CFG.n_class):
 if __name__ == '__main__':
     # build_data()
     import matplotlib.pyplot as plt
-    # visualize_graph()
+    visualize_graph()
     # generate_exclude_list()
     # build_label_embedding()
     # build_adj_matrix()
-    build_data()
+    # build_data()

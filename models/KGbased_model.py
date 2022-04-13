@@ -36,6 +36,7 @@ class KGBasedModel(nn.Module):
         
         mapped_visual_embedding = self.projection(visual_embedding)
         # print(mapped_visual_embedding.shape)
+        # condensed_graph_embedding = g_embedding
         condensed_graph_embedding = torch.mm(pseudo_classifier_output, g_embedding)
         # context attention module
         # scores = torch.mm(mapped_visual_embedding, condensed_graph_embedding.t())
@@ -43,7 +44,7 @@ class KGBasedModel(nn.Module):
         # print(scores.shape)
         distribution = nn.Softmax(dim=-1)(scores)
         # print(distribution.shape)
-        context_val = torch.mm(distribution, condensed_graph_embedding)
+        context_val = torch.mm(distribution.t(), condensed_graph_embedding)
         # print(context_val.shape)
         context_and_visual_vec = torch.cat([context_val, mapped_visual_embedding], dim=-1)
         # print(context_and_visual_vec.shape)
