@@ -3,6 +3,7 @@ import torch
 from torch.utils.data.dataset import Dataset
 from PIL import Image
 import json
+import pickle
 
 class PillMultilabel(Dataset):
     def __init__(self, root, transform=None, phase='train'):
@@ -22,8 +23,8 @@ class PillMultilabel(Dataset):
 
     def get_anno(self):
         self.json_list = self.get_list_file(self.root + "/data_{}/labels".format(self.phase))
-        list_path = os.path.join(self.root, '{}_anno.json'.format(self.phase))
-        self.cat2idx = json.load(open(os.path.join(self.root, 'cat2idx.json'), 'r'))
+        # list_path = os.path.join(self.root, '{}_anno.json'.format(self.phase))
+        self.cat2idx = pickle.load(open(os.path.join(self.root, 'name2id.pkl'), 'r'))
         self.instance_list =  json.load(open(os.path.join(self.root + f"/data_{self.phase}", f'instances_{self.phase}.json'), 'r'))
     
     def __len__(self):
@@ -43,3 +44,4 @@ class PillMultilabel(Dataset):
         target[labels] = 1
         data = {'image':img, 'name': filename, 'target': target}
         return data 
+

@@ -11,7 +11,7 @@ from models.modules import ImageEncoder
 from utils.metrics import MetricLogger
 from utils.utils import EarlyStopping
 class BaseModel:
-    def __init__(self, args):
+    def __init__(self, train_loader, test_loader, args):
         """
         Model wrapper for all models
         """
@@ -23,7 +23,7 @@ class BaseModel:
 
         # self.train_dataset, self.test_dataset = PillFolder(CFG.train_folder_new), PillFolder(CFG.test_folder_new, mode='test')
         # self.train_loader, self.test_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, shuffle=True), DataLoader(self.test_dataset, batch_size=args.v_batch_size, shuffle=False)
-        self.train_loader, self.test_loader = PillDataset(CFG.train_folder_v2, args.batch_size, CFG.g_embedding_condensed, 'train'), PillDataset(CFG.test_folder, args.v_batch_size, CFG.g_embedding_condensed, 'test')
+        self.train_loader, self.test_loader = train_loader, test_loader
         self.es = EarlyStopping(patience=args.patience)
 
         if not args.warmstart_backbone:
