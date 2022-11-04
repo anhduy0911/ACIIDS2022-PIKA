@@ -41,33 +41,6 @@ class EarlyStopping():
                 self.early_stop = True
                 
                 
-def KL_approximation_loss(target, input):
-    '''
-    Custom Approximation of KL given N samples of target dist and input dist
-    target - N, C
-    input - N, C
-    '''
-    N = target.shape[0]        
-    def conditional_probability(X, i, j):
-        def cosine_kernel(xi, xj):
-            return 1/2 * (torch.dot(xi, xj)/(torch.norm(xj) * torch.norm(xi)) + 1)
-        
-        sum_cosine = 0
-        for k in range(N):
-            sum_cosine += cosine_kernel(X[k], X[j])
-            
-        return cosine_kernel(X[i], X[j]) / sum_cosine
-    
-    loss = 0
-    for i in range(N):
-        for j in range(N):
-            if i == j:
-                continue
-            else:
-                loss += conditional_probability(target, i, j) * torch.log(conditional_probability(target, i, j) / conditional_probability(input, i, j))
-    
-    return loss
-
 def KL_loss_fast_compute(target, input, eps=1e-6):
     '''
     Custom Approximation of KL given N samples of target dist and input dist

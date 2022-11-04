@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from tqdm import tqdm as tqdm
-from data.pill_dataset_v2 import PillFolder, PillDataset
-# from data.pill_dataset import PillFolder
+from data.pill_dataset_v2 import PillDataset
+
 import config as CFG
 from models.KGbased_model import KGBasedModel
 from models.modules import Critic

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import config as CFG
 import torch
 from torch.nn import Parameter
+
 class ImageEncoder(nn.Module):
     """
     Encode images to a fixed size vector
@@ -49,51 +50,6 @@ class ImageEncoder(nn.Module):
         visual_embedding = self.model(x)
         y = self.classifier(visual_embedding)
         return visual_embedding, y
-
-class ImageEncoderHancraft(nn.Module):
-    """
-    Encode images to a fixed size vector
-    """
-
-    def __init__(self, model_name=CFG.image_model_name, pretrained=CFG.image_pretrained, trainable=CFG.image_trainable, image_num_classes=CFG.n_class):
-        super(ImageEncoderHancraft, self).__init__()
-        if model_name == "resnet50":
-            self.model = models.resnet50(pretrained=pretrained)
-            self.model_c = models.resnet50(pretrained=pretrained)
-            self.model_t = models.resnet50(pretrained=pretrained)
-            
-            self.visual_features = self.model.fc.in_features
-            self.visual_mid_features = int(self.visual_features / 2)
-
-            self.self_att = nn.MultiheadAttention(embed_dim=self.visual_features, num_heads=4)
-
-            for param in self.model.parameters():
-                param.requires_grad = trainable
-            self.img_num_classes = image_num_classes
-            
-
-            self.model.fc = nn.Identity()
-            self.model_c.fc = nn.Identity()
-            self.model_t.fc = nn.Identity()
-
-            self.classifier = nn.Sequential(
-                nn.Linear(self.visual_features * 3, self.visual_mid_features),
-                nn.ReLU(),
-                nn.Linear(self.visual_mid_features, self.img_num_classes)
-            ) 
-    
-    def forward(self, x, x_c, x_t):
-        visual_embedding = self.model(x)
-        visual_embedding_c = self.model(x_c)
-        visual_embedding_t = self.model(x_t)
-
-        # keys = torch.stack((visual_embedding, visual_embedding_c, visual_embedding_t), dim=0)
-        # att_ve, _ = self.self_att(query=torch.unsqueeze(visual_embedding, 0), key=keys, value=keys)
-        # att_ve = att_ve.squeeze()
-        ve = torch.cat((visual_embedding, visual_embedding_c, visual_embedding_t), dim=-1)
-        y = self.classifier(ve)
-
-        return ve, y
 
 class GCN(nn.Module):
     def __init__(self, n_class=CFG.n_class) -> None:

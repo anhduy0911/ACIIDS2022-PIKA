@@ -1,8 +1,6 @@
 import argparse
 import config as CFG
 from base_model import BaseModel
-from base_model_hancraft import BaseModel as BaseModelHandCraft
-from kg_e2e import KGPillRecognitionModel
 from kg_assisted_model import KGPillRecognitionModel as KGPillRecognitionModel_assisted
 from data import make_dataloader
 
@@ -21,8 +19,6 @@ def seed_everything(seed: int):
 
 def main(args):
     # model = BaseModel(args)
-    # model = BaseModelHandCraft(args)
-    # model = KGPillRecognitionModel(args)
     model = KGPillRecognitionModel_assisted(args)
     if args.mode == 'train':
         model.train()

@@ -173,9 +173,3 @@ def condensed_result_file():
     
     with open('./data/prescriptions/condensed_data.json', 'w', encoding='utf8') as f:
         json.dump(condensed_data, f, ensure_ascii=False)
-
-if __name__ == '__main__':
-    build_KG_graph('data/prescriptions/condensed_data.json', exclude_path='data/converted_graph/graph_exp2/exclude_75.pkl', name='pill_data_e75')
-    # prepare_prescription_dataset('data/prescriptions/condensed_data.json')
-    # condensed_result_file()
-    # test()
